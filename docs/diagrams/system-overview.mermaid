@@ -1,0 +1,34 @@
+graph TB
+    subgraph "Off-Chain Layer"
+        ISS["🏛️ Issuer<br/>did:ethr:0x14f69:0x…<br/>Credo.ts + OID4VCI"]
+        HOL["🤖 Holder (Agent)<br/>did:ethr:0x14f69:0x…<br/>Credo.ts + OpenAC wallet-unit-poc"]
+        VER["🔍 Verifier (Protocol)<br/>did:ethr:0x14f69:0x…<br/>Credo.ts + OID4VP + Predicate SDK"]
+    end
+
+    subgraph "ZK Layer"
+        CIRCUIT["⚡ OpenACGPPresentation.circom<br/>Groth16 SNARK<br/>Proves predicate satisfaction<br/>without revealing attributes"]
+    end
+
+    subgraph "On-Chain Layer (Base Sepolia)"
+        ERC1056["📋 EthereumDIDRegistry<br/>ERC-1056<br/>0xdca7ef03e98e0dc2b855be647c39abe984fcf21b"]
+        ANCHOR["⚓ OpenACCredentialAnchor<br/>Links did:ethr → commitment<br/>anchorCredential()"]
+        GPV["✅ GeneralizedPredicateVerifier<br/>10-step verification<br/>verifyAndRegister()"]
+        NR["🔒 NullifierRegistry<br/>Context-scoped nullifiers<br/>Replay prevention"]
+        GATE["🚪 AgentAccessGate<br/>Consumer contract<br/>onlyVerifiedAgent modifier"]
+        REP["📊 ZKReputationAccumulator<br/>Anonymous reputation<br/>per nullifier cohort"]
+    end
+
+    ISS -->|"OID4VCI<br/>JWT-VC (ES256K)"| HOL
+    VER -->|"OID4VP Request<br/>+ x-openac-predicate"| HOL
+    HOL -->|"Generates Groth16 proof"| CIRCUIT
+    CIRCUIT -->|"proof + pubSignals"| HOL
+    HOL -->|"VP JWT + zkProof"| VER
+    VER -->|"verifyAndRegister()"| GPV
+    GPV -->|"register(nullifier)"| NR
+    GPV -->|"PresentationAccepted event"| GATE
+    HOL -->|"anchorCredential()"| ANCHOR
+    GPV -->|"isMerkleRootCurrent()"| ANCHOR
+    ISS -->|"DID resolution"| ERC1056
+    HOL -->|"DID resolution"| ERC1056
+    VER -->|"DID resolution"| ERC1056
+    GPV -->|"increment()"| REP

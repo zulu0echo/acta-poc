@@ -1,0 +1,28 @@
+{
+  "name": "acta-poc",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "packages/shared",
+    "packages/issuer",
+    "packages/holder",
+    "packages/verifier",
+    "packages/contracts",
+    "packages/demo-app"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "demo": "npm run dev --workspace=packages/demo-app",
+    "start:issuer": "npm run start --workspace=packages/issuer",
+    "start:holder": "npm run start --workspace=packages/holder",
+    "start:verifier": "npm run start --workspace=packages/verifier",
+    "deploy:contracts": "npm run deploy --workspace=packages/contracts",
+    "docker:up": "docker-compose up --build",
+    "docker:down": "docker-compose down"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  }
+}

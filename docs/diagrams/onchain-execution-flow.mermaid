@@ -1,0 +1,27 @@
+flowchart TD
+    START([Verifier calls verifyAndRegister]) --> S1
+
+    S1["Step 1: Load policy\nrevert: PolicyNotFound / PolicyInactive / PolicyExpired"]
+    --> S2["Step 2: Decode pubSignals[6]\nrevert: InvalidPublicSignalCount"]
+    --> S3["Step 3: predicateProgramHash matches policy\nrevert: PredicateHashMismatch"]
+    --> S4["Step 4: expiryBlock > block.number\nrevert: ExpiryBlockPassed"]
+    --> S5["Step 5: credentialMerkleRoot is current\ncalls OpenACCredentialAnchor.isMerkleRootCurrent()\nrevert: MerkleRootNotCurrent"]
+    --> S6["Step 6: issuerPubKeyCommitment matches policy\nrevert: IssuerCommitmentMismatch"]
+    --> S7["Step 7: contextHash = keccak256(caller || policyId || nonce)\nrevert: ContextHashMismatch"]
+    --> S8["Step 8: ICircuitVerifier.verifyProof(proof, pubSignals)\nrevert: ProofInvalid"]
+    --> S9["Step 9: NullifierRegistry.register(nullifier)\nrevert: NullifierAlreadyActive (replay protection)"]
+    --> S10["Step 10: emit PresentationAccepted\nStore nullifier in _acceptedNullifiers"]
+    --> SUCCESS([✅ Verification complete])
+
+    style START fill:#1d4ed8,color:#fff
+    style SUCCESS fill:#065f46,color:#fff
+    style S1 fill:#1f2937,color:#e5e7eb
+    style S2 fill:#1f2937,color:#e5e7eb
+    style S3 fill:#1f2937,color:#e5e7eb
+    style S4 fill:#1f2937,color:#e5e7eb
+    style S5 fill:#1f2937,color:#e5e7eb
+    style S6 fill:#1f2937,color:#e5e7eb
+    style S7 fill:#1f2937,color:#e5e7eb
+    style S8 fill:#1f2937,color:#e5e7eb
+    style S9 fill:#1f2937,color:#e5e7eb
+    style S10 fill:#1f2937,color:#e5e7eb

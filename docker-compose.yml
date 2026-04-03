@@ -1,0 +1,134 @@
+version: '3.9'
+
+# ACTA (Anonymous Credentials for Trustless Agents) — Local Development Stack
+#
+# Services:
+#   hardhat    — Local Ethereum node + contract deployment
+#   issuer     — Credo.ts OID4VCI issuer on port 3001
+#   holder     — Credo.ts holder + OpenAC adapter on port 3002
+#   verifier   — Credo.ts OID4VP verifier on port 3003
+#   demo-app   — React + Vite demo on port 5173
+#
+# Usage:
+#   docker-compose up --build
+#   docker-compose logs -f [service]
+#   docker-compose down
+
+networks:
+  acta:
+    driver: bridge
+
+services:
+  # ── Hardhat Local Node ─────────────────────────────────────────────────────
+  hardhat:
+    build:
+      context: ./packages/contracts
+      dockerfile: Dockerfile
+    container_name: acta-hardhat
+    networks: [acta]
+    ports:
+      - "8545:8545"
+    command: ["npx", "hardhat", "node", "--hostname", "0.0.0.0"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8545"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # ── Contract Deployer ─────────────────────────────────────────────────────
+  deploy:
+    build:
+      context: ./packages/contracts
+      dockerfile: Dockerfile
+    container_name: acta-deploy
+    networks: [acta]
+    depends_on:
+      hardhat:
+        condition: service_healthy
+    command: ["npx", "hardhat", "run", "scripts/deploy.ts", "--network", "localhost"]
+    environment:
+      - HARDHAT_NETWORK=localhost
+    volumes:
+      - ./packages/contracts/deployments:/app/deployments
+
+  # ── Issuer ─────────────────────────────────────────────────────────────────
+  issuer:
+    build:
+      context: .
+      dockerfile: packages/issuer/Dockerfile
+    container_name: acta-issuer
+    networks: [acta]
+    ports:
+      - "3001:3001"
+    environment:
+      - ISSUER_PORT=3001
+      - ISSUER_BASE_URL=http://localhost:3001
+      - BASE_SEPOLIA_RPC_URL=http://hardhat:8545
+      - WALLET_KEY=dev-issuer-wallet-key
+    depends_on:
+      - deploy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Holder ─────────────────────────────────────────────────────────────────
+  holder:
+    build:
+      context: .
+      dockerfile: packages/holder/Dockerfile
+    container_name: acta-holder
+    networks: [acta]
+    ports:
+      - "3002:3002"
+    environment:
+      - HOLDER_PORT=3002
+      - ISSUER_BASE_URL=http://issuer:3001
+      - BASE_SEPOLIA_RPC_URL=http://hardhat:8545
+      - WALLET_KEY=dev-holder-wallet-key
+    depends_on:
+      issuer:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Verifier ───────────────────────────────────────────────────────────────
+  verifier:
+    build:
+      context: .
+      dockerfile: packages/verifier/Dockerfile
+    container_name: acta-verifier
+    networks: [acta]
+    ports:
+      - "3003:3003"
+    environment:
+      - VERIFIER_PORT=3003
+      - VERIFIER_BASE_URL=http://localhost:3003
+      - BASE_SEPOLIA_RPC_URL=http://hardhat:8545
+      - WALLET_KEY=dev-verifier-wallet-key
+    depends_on:
+      - deploy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3003/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Demo App ───────────────────────────────────────────────────────────────
+  demo-app:
+    build:
+      context: ./packages/demo-app
+      dockerfile: Dockerfile
+    container_name: acta-demo-app
+    networks: [acta]
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_ISSUER_URL=http://localhost:3001
+      - VITE_HOLDER_URL=http://localhost:3002
+      - VITE_VERIFIER_URL=http://localhost:3003
+    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

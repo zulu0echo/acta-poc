@@ -1,0 +1,33 @@
+sequenceDiagram
+    participant I as 🏛️ Issuer<br/>did:ethr:0x14f69:0xISSUER
+    participant H as 🤖 Agent<br/>did:ethr:0x14f69:0xHOLDER
+    participant ERC1056 as 📋 EthereumDIDRegistry<br/>(Base Sepolia)
+
+    Note over I,H: OID4VCI Pre-Authorized Code Flow
+
+    H->>I: GET /credential-offer?holder_did=did:ethr:0x14f69:0xHOLDER
+    I->>H: openid-credential-offer://?credential_offer={pre-authorized_code: "pac_…"}
+
+    H->>I: POST /token {grant_type: pre-authorized_code, pre-authorized_code: "pac_…"}
+    I->>H: {access_token: "at_…", c_nonce: "cn_…"}
+
+    Note over H: Build proof-of-possession JWT
+    Note over H: iss = did:ethr:0x14f69:0xHOLDER
+    Note over H: Signed with holder's secp256k1 key
+
+    H->>I: POST /credentials {format: jwt_vc_json, proof: {proof_type: jwt, jwt: "eyJ…"}}
+
+    Note over I: Resolve holder DID to verify PoP
+    I->>ERC1056: Query DIDOwnerChanged events for 0xHOLDER
+    ERC1056-->>I: Return holder's verification method
+
+    Note over I: Build AgentCapabilityVC
+    Note over I: issuer = did:ethr:0x14f69:0xISSUER
+    Note over I: sub = did:ethr:0x14f69:0xHOLDER
+    Note over I: alg = ES256K, kid = did:ethr:…#controller
+    Note over I: Sign JWT with issuer's secp256k1 key
+
+    I->>H: {format: jwt_vc_json, credential: "eyJ…"}
+
+    Note over H: Store JWT-VC in CredentialStore
+    Note over H: anchorCredential() → OpenACCredentialAnchor

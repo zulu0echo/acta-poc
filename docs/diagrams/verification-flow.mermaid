@@ -1,0 +1,37 @@
+sequenceDiagram
+    participant V as 🔍 Verifier<br/>did:ethr:0x14f69:0xVERIFIER
+    participant H as 🤖 Agent<br/>did:ethr:0x14f69:0xHOLDER
+    participant W as ⚡ OpenAC<br/>wallet-unit-poc
+    participant GPV as ✅ GeneralizedPredicateVerifier
+    participant NR as 🔒 NullifierRegistry
+
+    Note over V: Build predicate: auditScore≥80 AND capabilities includes 'evm-execution'
+    V->>V: PredicateBuilder.build() → predicateProgramHash
+    V->>GPV: registerPolicy(PolicyDescriptor) → policyId
+
+    Note over V,H: OID4VP Authorization Request
+    V->>H: openid4vp://?request={client_id: did:ethr:…VERIFIER, x-openac-predicate: "…", x-openac-policy-id: policyId}
+
+    Note over H: Validate request signature (did:ethr of verifier)
+    Note over H: Load credential from CredentialStore
+    H->>W: generatePresentationProof(credentialHandle, predicate, policyId, verifierAddress, nonce)
+
+    Note over W: 1. Compute contextHash = Poseidon(verifierAddress, policyId, nonce)
+    Note over W: 2. Execute OpenACGPPresentation.circom witness
+    Note over W: 3. Groth16 prove (~0.13s)
+    W-->>H: {proofBytes, publicSignals: {nullifier, contextHash, …}}
+
+    H->>V: POST response_uri: {vp_token: "eyJ… (VP JWT with zkProof claim)"}
+
+    Note over V: Phase 1 — Off-chain verification
+    V->>W: verifyProof(proofBytes, pubSignals)
+    W-->>V: valid = true (~0.05s)
+    Note over V: Verify issuerPubKeyCommitment vs resolved did:ethr
+
+    Note over V: Phase 2 — On-chain submission
+    V->>GPV: verifyAndRegister(policyId, proof, pubSignals, agentId, nonce)
+
+    Note over GPV: 10-step sequence (atomic)
+    GPV->>NR: register(nullifier, contextHash, expiryBlock)
+    NR-->>GPV: ✓ registered
+    GPV->>V: emit PresentationAccepted(policyId, nullifier, contextHash, verifier, blockNumber)

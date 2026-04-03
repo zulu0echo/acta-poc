@@ -1,0 +1,62 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+dist/
+build/
+out/
+*.tsbuildinfo
+
+# Hardhat artifacts & cache
+packages/contracts/artifacts/
+packages/contracts/cache/
+packages/contracts/typechain-types/
+packages/contracts/deployments/
+
+# ZK circuit build outputs (large binary files)
+circuits/build/
+*.zkey
+*.ptau
+*.wasm
+*.sym
+*.r1cs
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Credential store (contains sensitive JWT-VCs)
+.credential-store.json
+*.credential-store.json
+
+# Wallet / Credo databases
+*.db
+*.sqlite
+*.sqlite3
+afj-wallet/
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Vite cache
+.vite/
+packages/demo-app/.vite/
