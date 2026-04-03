@@ -6,7 +6,7 @@ export default function Step7Request() {
   const { state } = useSimulation()
   const [showFull, setShowFull] = useState(false)
 
-  const request = {
+  const request: Record<string, unknown> = {
     ...state.presentationRequest,
     nonce: state.policyId.slice(0, 16),
     response_uri: `http://localhost:3003/verify-callback/${state.policyId.slice(0, 16)}`,
