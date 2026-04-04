@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { RotateCcw, ChevronLeft, ChevronRight, Shield, FileText, BookOpen } from 'lucide-react'
+import { RotateCcw, ChevronLeft, ChevronRight, Shield, FileText, BookOpen, Layers } from 'lucide-react'
 import {
   SimulationContext,
   createInitialState,
@@ -15,11 +15,12 @@ import DocPanel from './components/DocPanel'
 import EventLog from './components/EventLog'
 import SpecPage from './components/SpecPage'
 import DocsPage from './components/DocsPage'
+import UseCasesPage from './components/UseCasesPage'
 
 const TOTAL_STEPS = 10
 
 export default function App() {
-  const [view, setView] = useState<'demo' | 'spec' | 'docs'>('demo')
+  const [view, setView] = useState<'demo' | 'spec' | 'docs' | 'usecases'>('demo')
   const [state, setState] = useState<SimulationState>(createInitialState)
   const eventIdRef = useRef(0)
 
@@ -189,6 +190,17 @@ export default function App() {
                 <BookOpen size={11} />
                 Documentation
               </button>
+              <button
+                onClick={() => setView('usecases')}
+                className={`flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-md transition-all ${
+                  view === 'usecases'
+                    ? 'bg-brand-600 text-white'
+                    : 'text-gray-400 hover:text-gray-200'
+                }`}
+              >
+                <Layers size={11} />
+                Use Cases
+              </button>
             </div>
 
             {/* Step progress — only shown in demo view */}
@@ -242,6 +254,9 @@ export default function App() {
 
         {/* Documentation page */}
         {view === 'docs' && <div className="flex-1 overflow-hidden"><DocsPage /></div>}
+
+        {/* Use Cases page */}
+        {view === 'usecases' && <div className="flex-1 flex overflow-hidden"><UseCasesPage /></div>}
 
         {/* Demo layout */}
         {view === 'demo' && (
