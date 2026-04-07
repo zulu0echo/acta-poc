@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 const SECTIONS = [
   { id: 'overview',       label: 'Overview' },
   { id: 'architecture',   label: 'Architecture' },
+  { id: 'flow',           label: 'Protocol Flow' },
   { id: 'credential',     label: 'Credential Schema' },
   { id: 'circuit',        label: 'ZK Circuit' },
   { id: 'contracts',      label: 'Smart Contracts' },
@@ -13,6 +14,68 @@ const SECTIONS = [
   { id: 'security',       label: 'Security Model' },
   { id: 'errors',         label: 'Error Reference' },
 ] as const
+
+const MERMAID_DOC = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8"/>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0d1117; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; }
+  .mermaid { width: 100%; }
+  .mermaid svg { width: 100% !important; max-width: 100% !important; font-size: 15px !important; }
+</style>
+</head>
+<body>
+<div class="mermaid">
+sequenceDiagram
+    participant I as 🏛️ Issuer
+    participant A as 🤖 Agent
+    participant V as 🔍 Verifier
+    participant C as ⛓️ Chain
+
+    Note over I,A: Phase 1 — Identity & Credential
+    I->>I: 1. Create did:ethr identity
+    A->>A: 1. Create did:ethr identity
+    V->>V: 1. Create did:ethr identity
+    I->>I: 2. Configure AgentCapabilityCredential schema
+    I->>A: 3. OID4VCI — issue JWT-VC (off-chain)
+
+    Note over A,C: Phase 2 — On-Chain Anchoring
+    A->>C: 4. anchorCredential(commitment, merkleRoot)
+
+    Note over V,C: Phase 3 — Policy Registration
+    V->>V: 5. Build predicate (auditScore ≥ 80 ∧ caps ⊇ evm-exec)
+    V->>C: 6. registerPolicy(predicateHash, issuerCommitment) → policyId
+
+    Note over A,V: Phase 4 — Presentation Request
+    V->>A: 7. OID4VP auth request (policyId, predicate, nonce, verifierAddress)
+
+    Note over A,C: Phase 5 — ZK Proof
+    A->>A: 8. Groth16 circuit → proof π, nullifier, contextHash
+    A->>V: 8. POST VP JWT + proof π
+
+    Note over V,C: Phase 6 — Verification
+    V->>V: 9a. Off-chain — verify JWT sig, DID, predicate hash, expiry
+    V->>C: 9b. verifyAndRegister(π, policyId, nullifier)
+    C->>C: 9b. 10-step check → emit PresentationAccepted
+
+    Note over A,C: Phase 7 — Access
+    A->>C: 10. AgentAccessGate — present nullifier
+    C->>A: 10. AccessGranted ✓
+    C-->>A: 10. Replay attempt → revert NullifierAlreadyActive
+</div>
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'dark',
+    fontSize: 15,
+    sequence: { actorMargin: 60, messageMargin: 30, mirrorActors: false }
+  });
+</script>
+</body>
+</html>`
 
 export default function DocsPage() {
   const [active, setActive] = useState('overview')
@@ -136,6 +199,18 @@ agentId = uint256(uint160(holderAddress))
 
 // ERC-1056 registry on Base Sepolia
 0xdca7ef03e98e0dc2b855be647c39abe984fcf21b`}</CB>
+          </Section>
+
+          {/* ── Protocol Flow ──────────────────────────────────────────── */}
+          <Section id="flow" label="Protocol Flow" ref_={ref('flow')}>
+            <P>The complete 10-step ACTA flow across four actors — Issuer, Agent, Verifier, and EVM Chain.</P>
+            <iframe
+              srcDoc={MERMAID_DOC}
+              title="ACTA Protocol Flow"
+              sandbox="allow-scripts"
+              className="w-full rounded-lg border border-gray-700/40"
+              style={{ height: '640px' }}
+            />
           </Section>
 
           {/* ── Credential Schema ──────────────────────────────────────── */}
