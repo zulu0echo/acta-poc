@@ -1,12 +1,14 @@
 import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
+import { initPoseidon } from '@acta/shared'
 import { createEthrDIDIdentity } from '../../issuer/src/didEthrSetup'
 import { createVerifierRouter } from './verifierRoutes'
 
 const PORT = parseInt(process.env.VERIFIER_PORT ?? '3003', 10)
 
 async function start() {
+  await initPoseidon()
   const identity = await createEthrDIDIdentity(process.env.VERIFIER_PRIVATE_KEY)
   console.log(`[verifier] DID: ${identity.did}`)
 

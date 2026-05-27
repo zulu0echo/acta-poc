@@ -12,6 +12,7 @@ const CIRCUIT_ID = ethers.keccak256(ethers.toUtf8Bytes('OpenACGPPresentation.v1'
  */
 export class PolicyRegistry {
   private policies: Map<string, PolicyDescriptor> = new Map()
+  private predicatePrograms: Map<string, string> = new Map()
 
   constructor(
     private identity: EthrDIDIdentity,
@@ -82,12 +83,17 @@ export class PolicyRegistry {
       active:               true,
     }
     this.policies.set(policyId, descriptor)
+    this.predicatePrograms.set(policyId, predicate.toJSON())
 
     return policyId
   }
 
   getPolicy(policyId: string): PolicyDescriptor | undefined {
     return this.policies.get(policyId)
+  }
+
+  getPredicateJson(policyId: string): string | undefined {
+    return this.predicatePrograms.get(policyId)
   }
 
   getAllPolicies(): PolicyDescriptor[] {

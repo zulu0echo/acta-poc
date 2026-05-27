@@ -1,12 +1,14 @@
 import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
+import { initPoseidon } from '@acta/shared'
 import { createEthrDIDIdentity } from './didEthrSetup'
 import { createIssuanceRouter } from './issuanceRoutes'
 
 const PORT = parseInt(process.env.ISSUER_PORT ?? '3001', 10)
 
 async function start() {
+  await initPoseidon()
   const identity = await createEthrDIDIdentity(process.env.ISSUER_PRIVATE_KEY)
   console.log(`[issuer] DID: ${identity.did}`)
   console.log(`[issuer] Address: ${identity.signer.address}`)

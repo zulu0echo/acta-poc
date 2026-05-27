@@ -8,7 +8,7 @@ import { INullifierRegistry } from "../interfaces/INullifierRegistry.sol";
  * @title NullifierRegistry
  * @notice Context-scoped nullifier registry for ACTA presentations.
  *
- * @dev Nullifiers are scoped to a contextHash = keccak256(verifierAddress || policyId || nonce),
+ * @dev Nullifiers are scoped to a contextHash = Poseidon(verifierAddress, policyId, nonce) in proofs;
  *      so the same underlying credential may be used in different policies without
  *      cross-protocol linkability.
  *

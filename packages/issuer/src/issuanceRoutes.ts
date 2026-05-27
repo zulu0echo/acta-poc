@@ -8,6 +8,8 @@ import { CREDENTIAL_TYPE } from '@acta/shared'
 import * as crypto from 'crypto'
 
 const ISSUER_BASE_URL = process.env.ISSUER_BASE_URL ?? 'http://localhost:3001'
+const STRICT_ISSUANCE = process.env.STRICT_ISSUANCE === 'true'
+const ALLOW_OPEN_CREDENTIAL_OFFER = process.env.ALLOW_OPEN_CREDENTIAL_OFFER !== 'false'
 
 // In-memory pre-authorized code store (replace with Redis in production).
 // Each entry stores the issued access token so it can be validated at /credentials.
@@ -95,6 +97,10 @@ export function createIssuanceRouter(identity: EthrDIDIdentity): Router {
   // ── Credential Offer ──────────────────────────────────────────────────────
 
   router.get('/credential-offer', (req: Request, res: Response) => {
+    if (!ALLOW_OPEN_CREDENTIAL_OFFER && process.env.NODE_ENV === 'production') {
+      res.status(403).json({ error: 'Open credential offers disabled — use authenticated issuance' })
+      return
+    }
     const holderDid = req.query.holder_did as string | undefined
     const code = crypto.randomBytes(16).toString('hex')
     preAuthCodes.set(code, { holderDid })
@@ -200,7 +206,7 @@ export function createIssuanceRouter(identity: EthrDIDIdentity): Router {
 
     const subjectData: AgentCapabilityCredentialSubject = {
       ...DEFAULT_CREDENTIAL_SUBJECT,
-      ...(body.credential_subject ?? {}),
+      ...(STRICT_ISSUANCE ? {} : (body.credential_subject ?? {})),
       id:        holderDid,
       auditedBy: identity.did,
     }
@@ -263,6 +269,11 @@ function verifyAndExtractPopJwt(
       return { valid: false, reason: 'PoP JWT is expired' }
     }
 
+    const expectedAud = process.env.ISSUER_BASE_URL ?? 'http://localhost:3001'
+    if (payload.aud && payload.aud !== expectedAud) {
+      return { valid: false, reason: `PoP JWT aud must be ${expectedAud}` }
+    }
+
     // Extract Ethereum address from the DID (did:ethr:...:<address>)
     const holderAddress = iss.split(':').pop()!
     if (!ethers.isAddress(holderAddress)) {
@@ -277,6 +288,16 @@ function verifyAndExtractPopJwt(
     if (sigHex.length < 130) {
       return { valid: false, reason: 'PoP JWT signature is too short (expected 64-byte secp256k1 signature)' }
     }
+
+    // Enforce low-s to reduce ECDSA malleability.
+    const SECP256K1_N =
+      0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141n
+    const SECP256K1_HALF_N = SECP256K1_N / 2n
+
+    const r = BigInt('0x' + sigHex.slice(2, 66))
+    const s = BigInt('0x' + sigHex.slice(66, 130))
+    if (r === 0n || s === 0n) return { valid: false, reason: 'PoP JWT signature has invalid r/s' }
+    if (s > SECP256K1_HALF_N) return { valid: false, reason: 'PoP JWT signature violates low-s rule' }
 
     let sigValid = false
     for (const v of [27, 28]) {

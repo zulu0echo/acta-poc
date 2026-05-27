@@ -97,27 +97,32 @@ export function createVerifierRouter(identity: EthrDIDIdentity): Router {
   // ── Presentation Request (OID4VP) ─────────────────────────────────────────
 
   router.post('/presentation-request', asyncHandler(async (req: Request, res: Response) => {
-    const { policyId, predicateJson, holderDid } = req.body as {
+    const { policyId, holderDid } = req.body as {
       policyId: string
-      predicateJson: string
       holderDid?: string
     }
 
-    if (!policyId || !predicateJson) {
-      res.status(400).json({ error: 'policyId and predicateJson are required' })
+    if (!policyId) {
+      res.status(400).json({ error: 'policyId is required' })
+      return
+    }
+
+    const policy = policyRegistry.getPolicy(policyId)
+    const predicateJson = policyRegistry.getPredicateJson(policyId)
+    if (!policy || !predicateJson) {
+      res.status(404).json({ error: 'Unknown policyId — register policy first via POST /register-policy' })
       return
     }
 
     const nonce = BigInt('0x' + Buffer.from(ethers.randomBytes(8)).toString('hex'))
 
-    const predicate = JSON.parse(predicateJson)
     const result = requestBuilder.createPresentationRequest({
       policyId,
       predicate: {
         toJSON:        () => predicateJson,
-        hash:          predicate.hash ?? ethers.keccak256(ethers.toUtf8Bytes(predicateJson)),
+        hash:          policy.predicateProgramHash,
         toDescription: () => '',
-        raw:           predicate,
+        raw:           JSON.parse(predicateJson),
       } as never,
       verifierCallbackUrl:    `${VERIFIER_BASE_URL}/verify-callback/${policyId}`,
       sessionNonce:           nonce,
@@ -166,6 +171,7 @@ export function createVerifierRouter(identity: EthrDIDIdentity): Router {
     const offchainResult = await offchainVerifier.verifyOffchain({
       presentation,
       policyId,
+      expectedPredicateHash: policyRegistry.getPolicy(policyId)?.predicateProgramHash,
       issuerDid,
       vpJwt:    vp_token,
       holderDid,

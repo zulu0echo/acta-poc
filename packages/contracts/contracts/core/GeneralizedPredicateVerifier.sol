@@ -22,7 +22,8 @@ import { IPoseidonT4 }                   from "../lib/PoseidonT4.sol";
  *      pubSignals[2] = predicateProgramHash
  *      pubSignals[3] = issuerPubKeyCommitment
  *      pubSignals[4] = credentialMerkleRoot
- *      pubSignals[5] = expiryBlock
+ *      pubSignals[5] = credentialCommitment
+ *      pubSignals[6] = expiryBlock
  *
  * Step 7 — Context Hash Verification:
  *   The circuit computes contextHash = Poseidon(verifierAddress, policyId, nonce).
@@ -45,8 +46,9 @@ contract GeneralizedPredicateVerifier is IGeneralizedPredicateVerifier, Ownable2
     uint256 private constant IDX_PREDICATE_HASH         = 2;
     uint256 private constant IDX_ISSUER_COMMITMENT      = 3;
     uint256 private constant IDX_MERKLE_ROOT            = 4;
-    uint256 private constant IDX_EXPIRY_BLOCK           = 5;
-    uint256 private constant EXPECTED_PUBLIC_SIGNAL_COUNT = 6;
+    uint256 private constant IDX_CREDENTIAL_COMMITMENT  = 5;
+    uint256 private constant IDX_EXPIRY_BLOCK           = 6;
+    uint256 private constant EXPECTED_PUBLIC_SIGNAL_COUNT = 7;
 
     INullifierRegistry      public immutable nullifierRegistry;
     IOpenACCredentialAnchor public immutable credentialAnchor;
@@ -189,6 +191,7 @@ contract GeneralizedPredicateVerifier is IGeneralizedPredicateVerifier, Ownable2
         bytes32 predicateProgramHash = bytes32(pubSignals[IDX_PREDICATE_HASH]);
         bytes32 issuerCommitment     = bytes32(pubSignals[IDX_ISSUER_COMMITMENT]);
         bytes32 merkleRoot           = bytes32(pubSignals[IDX_MERKLE_ROOT]);
+        bytes32 credentialCommitment = bytes32(pubSignals[IDX_CREDENTIAL_COMMITMENT]);
         uint256 expiryBlock          = pubSignals[IDX_EXPIRY_BLOCK];
 
         // Step 3: Predicate hash must match the registered policy
@@ -204,6 +207,15 @@ contract GeneralizedPredicateVerifier is IGeneralizedPredicateVerifier, Ownable2
             revert MerkleRootNotCurrent(merkleRoot);
         }
 
+        // Step 5b: Anchored commitment must match proof public signal
+        (bytes32 anchoredCommitment, , ) = credentialAnchor.getCommitment(
+            agentId,
+            policy.credentialType
+        );
+        if (anchoredCommitment != credentialCommitment) {
+            revert CommitmentMismatch(credentialCommitment, anchoredCommitment);
+        }
+
         // Step 6: Issuer public key commitment must match policy
         if (issuerCommitment != policy.issuerCommitment) {
             revert IssuerCommitmentMismatch(issuerCommitment, policy.issuerCommitment);
@@ -213,11 +225,12 @@ contract GeneralizedPredicateVerifier is IGeneralizedPredicateVerifier, Ownable2
         // The circuit computes contextHash = Poseidon(verifierAddress, policyId, nonce).
         // We must recompute the same Poseidon hash on-chain and compare.
         //
-        // If contextHasher is not set (address(0)), this check is skipped.
-        // This is acceptable ONLY for local Hardhat testing. Production deployments
-        // MUST have contextHasher set to a verified IPoseidonT4 implementation.
-        // Without this check, front-running protection is not enforced on-chain.
-        if (address(contextHasher) != address(0)) {
+        // Step 7: Context hash binds (msg.sender, policyId, nonce). Required on live networks.
+        if (address(contextHasher) == address(0)) {
+            if (block.chainid != 31337) {
+                revert ContextHasherNotConfigured();
+            }
+        } else {
             uint256 expectedCtxHash = contextHasher.hash(
                 uint256(uint160(msg.sender)),
                 uint256(policyId),

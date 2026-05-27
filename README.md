@@ -247,6 +247,8 @@ See [docs/API_REFERENCE.md](./docs/API_REFERENCE.md) for the full API.
 | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | Engineers, auditors | Technical design, trust assumptions, audit surface |
 | [docs/FLOW.md](./docs/FLOW.md) | Engineers | Step-by-step flow with exact function calls |
 | [docs/API_REFERENCE.md](./docs/API_REFERENCE.md) | Integrators | Complete Verifier SDK API reference |
+| [docs/PM_AGENT_PROMPT.md](./docs/PM_AGENT_PROMPT.md) | PMs, AI agents | Copy-paste prompt: keep all docs and demo in sync on every change |
+| [docs/SECURITY_AUDIT.md](./docs/SECURITY_AUDIT.md) | Engineers, auditors | Security findings and remediation tracker |
 
 ---
 
@@ -277,11 +279,13 @@ This is a proof-of-concept implementation. The items below must be resolved befo
 
 ### Must-fix before deployment
 
-1. **Real wallet-unit-poc required**: The `StubWalletUnit` generates keccak256-based context hashes instead of Poseidon. It will fail Step 7 on any network where `contextHasher` is set. The real `wallet-unit-poc` from [privacy-ethereum/zkID](https://github.com/privacy-ethereum/zkID) must be installed so that `generateProof()` computes `Poseidon(verifier, policy, nonce)` internally.
-2. **Deploy IPoseidonT4**: Call `setContextHasher(poseidonT4Address)` on `GeneralizedPredicateVerifier` — **required for front-running protection** (Step 7). Without it, anyone who sees a pending `verifyAndRegister` transaction can front-run it.
-3. **Trusted setup**: Run the Groth16 ceremony with ≥3 independent parties; replace `OpenACSnarkVerifier` with the ceremony-generated verifier. The current verifier accepts the stub sentinel proof.
-4. **Persist credential randomness**: Call `credentialStore.setAnchorData(id, commitment, merkleRoot, randomnessHex)` after anchoring. A server restart will fail to re-import if `randomnessHex` is not stored.
-5. **Replace in-memory stores**: `preAuthCodes` and `sessions` are module-level Maps — lost on restart and not safe for multi-instance deployments. Replace with Redis or a database.
+1. **Real wallet-unit-poc required**: The `StubWalletUnit` is for local dev only; holder refuses to start in production without WUP. See [docs/SECURITY_AUDIT.md](./docs/SECURITY_AUDIT.md).
+2. **Deploy ceremony-generated verifier**: `OpenACSnarkVerifier` rejects all proofs until replaced with `OpenACSnarkVerifier_generated.sol` from `setup-circuits.sh`. Local tests use `TestOpenACSnarkVerifier` only.
+3. **Deploy IPoseidonT4**: Call `setContextHasher(poseidonT4Address)` on `GeneralizedPredicateVerifier` — **required on live networks** (Step 7 reverts if unset outside Hardhat).
+4. **Trusted setup**: Run the Groth16 ceremony with ≥3 independent parties; replace placeholder verifier.
+5. **Persist credential randomness**: Call `credentialStore.setAnchorData(id, commitment, merkleRoot, randomnessHex)` after anchoring. A server restart will fail to re-import if `randomnessHex` is not stored.
+6. **Replace in-memory stores**: `preAuthCodes` and `sessions` are module-level Maps — lost on restart and not safe for multi-instance deployments. Replace with Redis or a database.
+7. **Production env**: Set `STRICT_ISSUANCE=true`, `ALLOW_OPEN_CREDENTIAL_OFFER=false`, `TRUSTED_VERIFIER_DIDS`, `TRUSTED_ONCHAIN_VERIFIERS` on holder.
 
 ### Should-fix soon
 

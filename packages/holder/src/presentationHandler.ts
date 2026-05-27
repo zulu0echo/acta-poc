@@ -2,6 +2,7 @@ import { ethers } from 'ethers'
 import type { EthrDIDIdentity } from './didEthrSetup'
 import type { CredentialStore } from './credentialStore'
 import { OpenACAdapter } from './openacAdapter'
+import { validatePresentationRequest } from './presentationValidation'
 import type {
   OID4VPAuthRequest,
   OpenACPresentation,
@@ -40,10 +41,7 @@ export class PresentationHandler {
   async handlePresentationRequest(
     authRequest: OID4VPAuthRequest
   ): Promise<PresentationResponse> {
-    // Validate request
-    if (!authRequest['x-openac-predicate']) {
-      throw new Error('Missing x-openac-predicate in OID4VP request')
-    }
+    validatePresentationRequest(authRequest)
     const predicate = JSON.parse(authRequest['x-openac-predicate']) as PredicateProgram
     const policyId  = authRequest['x-openac-policy-id']
     const verifierOnchainAddress = authRequest['x-onchain-verifier']

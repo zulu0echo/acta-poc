@@ -2,12 +2,13 @@ import { expect } from 'chai'
 import { PredicateBuilder } from '../src/predicateBuilder'
 import { PresentationRequestBuilder } from '../src/presentationRequest'
 import { createEthrDIDIdentity } from '../../issuer/src/didEthrSetup'
-import { hashPredicateProgram } from '@acta/shared'
+import { hashPredicateProgram, initPoseidon } from '@acta/shared'
 
 describe('Verifier — PredicateBuilder and PresentationRequest', () => {
   let identity: Awaited<ReturnType<typeof createEthrDIDIdentity>>
 
   before(async () => {
+    await initPoseidon()
     identity = await createEthrDIDIdentity()
   })
 

@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ACTA Protocol</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0d1117;
+    color: #e2e8f0;
+    font-family: 'SF Pro Display', 'Inter', system-ui, sans-serif;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding: 20px 28px 16px;
+    overflow: hidden;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 16px;
+    flex-shrink: 0;
+  }
+  header h1 { font-size: 1.05rem; font-weight: 700; color: #f8fafc; letter-spacing: -0.01em; }
+  header p  { font-size: 0.65rem; color: #475569; margin-top: 2px; }
+
+  /* ── 4-column swimlane grid ── */
+  .swimlane {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    min-height: 0;
+  }
+
+  .lane {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  /* actor header */
+  .actor {
+    border-radius: 8px 8px 0 0;
+    padding: 8px 6px 7px;
+    text-align: center;
+    border: 1px solid;
+    border-bottom: none;
+    flex-shrink: 0;
+  }
+  .actor-icon { font-size: 1.1rem; }
+  .actor-name { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.02em; display: block; margin-top: 2px; }
+  .actor-sub  { font-size: 0.57rem; opacity: 0.6; }
+
+  .actor.issuer   { background:#0a1626; border-color:#2563eb; color:#93c5fd; }
+  .actor.holder   { background:#081a10; border-color:#16a34a; color:#86efac; }
+  .actor.verifier { background:#160922; border-color:#9333ea; color:#d8b4fe; }
+  .actor.chain    { background:#1a1305; border-color:#d97706; color:#fcd34d; }
+
+  /* lane body */
+  .lane-body {
+    flex: 1;
+    border: 1px solid;
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    padding: 8px 7px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    overflow: hidden;
+  }
+  .lane-body.issuer   { border-color:#2563eb; background: linear-gradient(180deg,#0a1626 0%,#080e1a 100%); }
+  .lane-body.holder   { border-color:#16a34a; background: linear-gradient(180deg,#081a10 0%,#060f0a 100%); }
+  .lane-body.verifier { border-color:#9333ea; background: linear-gradient(180deg,#160922 0%,#0e0616 100%); }
+  .lane-body.chain    { border-color:#d97706; background: linear-gradient(180deg,#1a1305 0%,#110d03 100%); }
+
+  /* step pill */
+  .step {
+    border-radius: 7px;
+    padding: 7px 9px;
+    border: 1px solid;
+    font-size: 0.67rem;
+    line-height: 1.4;
+    flex-shrink: 0;
+  }
+  .step-head {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-weight: 700;
+    margin-bottom: 2px;
+  }
+  .step-num {
+    width: 15px; height: 15px;
+    border-radius: 50%;
+    font-size: 0.55rem;
+    font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .step-body { font-size: 0.61rem; color: #94a3b8; padding-left: 20px; line-height: 1.4; }
+  .mono {
+    font-family: 'SF Mono','Fira Code',monospace;
+    font-size: 0.58rem;
+    color: #7dd3fc;
+    background: rgba(0,0,0,0.35);
+    border-radius: 3px;
+    padding: 1px 4px;
+    display: inline-block;
+    margin-top: 2px;
+  }
+
+  .step.issuer   { background:#0b1d38; border-color:#1d4ed855; }
+  .step.holder   { background:#0a2016; border-color:#15803d55; }
+  .step.verifier { background:#1a0c30; border-color:#7e22ce55; }
+  .step.chain    { background:#221704; border-color:#b4530955; }
+
+  .step-num.issuer   { background:#1d4ed8; color:#fff; }
+  .step-num.holder   { background:#15803d; color:#fff; }
+  .step-num.verifier { background:#7e22ce; color:#fff; }
+  .step-num.chain    { background:#b45309; color:#fff; }
+
+  /* phase divider */
+  .phase-divider {
+    font-size: 0.55rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: #334155;
+    padding: 3px 0 2px;
+    border-top: 1px solid #1e2533;
+    margin-top: 2px;
+    flex-shrink: 0;
+  }
+
+  /* arrows strip at bottom */
+  .arrows {
+    flex-shrink: 0;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-top: 8px;
+  }
+  .arrow-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.6rem;
+    color: #475569;
+    gap: 4px;
+  }
+  .arrow-line {
+    flex: 1;
+    height: 1px;
+    position: relative;
+  }
+  .arrow-line::after {
+    content: '▶';
+    position: absolute;
+    right: -4px; top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.5rem;
+  }
+
+  /* ZK callout */
+  .zk-bar {
+    flex-shrink: 0;
+    margin-top: 8px;
+    padding: 7px 14px;
+    background: linear-gradient(135deg, #0f172a, #1a0930);
+    border: 1px solid #7e22ce44;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.62rem;
+    color: #94a3b8;
+    line-height: 1.5;
+  }
+  .zk-bar .icon { font-size: 1rem; flex-shrink: 0; }
+  .zk-bar strong { color: #d8b4fe; }
+  .zk-bar code {
+    font-family: 'SF Mono','Fira Code',monospace;
+    color: #a78bfa;
+    background: rgba(0,0,0,0.35);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 0.58rem;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>ACTA — Anonymous Credentials for Trustless Agents</h1>
+  <p>End-to-end protocol flow · Identity · OID4VCI/OID4VP · ZK Groth16 · EVM</p>
+</header>
+
+<div class="swimlane">
+
+  <!-- ISSUER -->
+  <div class="lane">
+    <div class="actor issuer">
+      <span class="actor-icon">🏛️</span>
+      <span class="actor-name">Issuer</span>
+      <div class="actor-sub">OID4VCI · port 3001</div>
+    </div>
+    <div class="lane-body issuer">
+
+      <div class="phase-divider">Setup</div>
+      <div class="step issuer">
+        <div class="step-head"><span class="step-num issuer">0</span>Create did:ethr</div>
+        <div class="step-body">createEthrDIDIdentity(ISSUER_KEY)</div>
+      </div>
+
+      <div class="phase-divider">OID4VCI Issuance</div>
+      <div class="step issuer">
+        <div class="step-head"><span class="step-num issuer">1</span>Credential Offer</div>
+        <div class="step-body">GET /credential-offer<br/>→ pre-authorized_code</div>
+      </div>
+      <div class="step issuer">
+        <div class="step-head"><span class="step-num issuer">2</span>Issue JWT-VC</div>
+        <div class="step-body">Verifies proof-of-possession, signs with ES256K.<br/><span class="mono">AgentCapabilityCredential</span></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- HOLDER / AGENT -->
+  <div class="lane">
+    <div class="actor holder">
+      <span class="actor-icon">🤖</span>
+      <span class="actor-name">Holder / Agent</span>
+      <div class="actor-sub">wallet-unit-poc · port 3002</div>
+    </div>
+    <div class="lane-body holder">
+
+      <div class="phase-divider">Setup</div>
+      <div class="step holder">
+        <div class="step-head"><span class="step-num holder">0</span>Create did:ethr</div>
+        <div class="step-body">createEthrDIDIdentity(HOLDER_KEY)</div>
+      </div>
+
+      <div class="phase-divider">Receive &amp; Anchor</div>
+      <div class="step holder">
+        <div class="step-head"><span class="step-num holder">3</span>Store Credential</div>
+        <div class="step-body">credentialStore.store({ jwt, decoded })</div>
+      </div>
+      <div class="step holder">
+        <div class="step-head"><span class="step-num holder">4</span>Anchor On-Chain</div>
+        <div class="step-body">adapter.importCredential() → commitment + merkleRoot → anchorCredential()</div>
+      </div>
+
+      <div class="phase-divider">ZK Proof &amp; Response</div>
+      <div class="step holder">
+        <div class="step-head"><span class="step-num holder">7</span>Generate ZK Proof</div>
+        <div class="step-body">Circom Groth16 circuit.<br/><span class="mono">contextHash = Poseidon(verifier, policy, nonce)</span><br/>Public: [nullifier, contextHash, predicateHash]</div>
+      </div>
+      <div class="step holder">
+        <div class="step-head"><span class="step-num holder">8</span>Submit VP Response</div>
+        <div class="step-body">VP JWT + zkProof → POST /verify-callback</div>
+      </div>
+
+      <div class="phase-divider">Access</div>
+      <div class="step holder">
+        <div class="step-head"><span class="step-num holder">10</span>Access Granted ✓</div>
+        <div class="step-body">Present nullifier to consumer contract.<br/><span class="mono">isAccessGranted(nullifier) → true</span></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- VERIFIER -->
+  <div class="lane">
+    <div class="actor verifier">
+      <span class="actor-icon">🔍</span>
+      <span class="actor-name">Verifier</span>
+      <div class="actor-sub">OID4VP · port 3003</div>
+    </div>
+    <div class="lane-body verifier">
+
+      <div class="phase-divider">Setup</div>
+      <div class="step verifier">
+        <div class="step-head"><span class="step-num verifier">0</span>Create did:ethr</div>
+        <div class="step-body">createEthrDIDIdentity(VERIFIER_KEY)</div>
+      </div>
+
+      <div class="phase-divider">Policy</div>
+      <div class="step verifier">
+        <div class="step-head"><span class="step-num verifier">5</span>Build Predicate</div>
+        <div class="step-body">auditScore ≥ 80 AND capabilities includes 'evm-execution' AND jurisdiction ∉ {IR, KP, RU, BY}<br/><span class="mono">predicate.hash → bytes32</span></div>
+      </div>
+
+      <div class="phase-divider">OID4VP Request</div>
+      <div class="step verifier">
+        <div class="step-head"><span class="step-num verifier">6</span>Send Auth Request</div>
+        <div class="step-body">openid4vp:// with x-openac-predicate, x-openac-policy-id, nonce, response_uri</div>
+      </div>
+
+      <div class="phase-divider">Verification</div>
+      <div class="step verifier">
+        <div class="step-head"><span class="step-num verifier">9a</span>Off-chain Verify</div>
+        <div class="step-body">JWT sig + DID resolution + predicate hash + expiry<br/><span class="mono">~50ms</span></div>
+      </div>
+      <div class="step verifier">
+        <div class="step-head"><span class="step-num verifier">9b</span>On-chain Submit</div>
+        <div class="step-body">GPVerifier.verifyAndRegister() — 10-step snark check<br/><span class="mono">→ PresentationAccepted</span></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- EVM CHAIN -->
+  <div class="lane">
+    <div class="actor chain">
+      <span class="actor-icon">⛓️</span>
+      <span class="actor-name">EVM Chain</span>
+      <div class="actor-sub">Base Sepolia · ^0.8.24</div>
+    </div>
+    <div class="lane-body chain">
+
+      <div class="phase-divider">Deploy</div>
+      <div class="step chain">
+        <div class="step-head"><span class="step-num chain">0</span>Deploy Contracts</div>
+        <div class="step-body">NullifierRegistry · CredentialAnchor · GPVerifier · AccessGate · SnarkVerifier</div>
+      </div>
+
+      <div class="phase-divider">Anchor</div>
+      <div class="step chain">
+        <div class="step-head"><span class="step-num chain">4</span>anchorCredential()</div>
+        <div class="step-body">agentId → commitment + merkleRoot<br/><span class="mono">→ CredentialAnchored</span></div>
+      </div>
+
+      <div class="phase-divider">Policy</div>
+      <div class="step chain">
+        <div class="step-head"><span class="step-num chain">5</span>registerPolicy()</div>
+        <div class="step-body">GPVerifier stores predicateProgramHash + issuerCommitment<br/><span class="mono">→ PolicyRegistered</span></div>
+      </div>
+
+      <div class="phase-divider">Verify &amp; Gate</div>
+      <div class="step chain">
+        <div class="step-head"><span class="step-num chain">9b</span>verifyAndRegister()</div>
+        <div class="step-body">Groth16 on-chain verify → register nullifier<br/><span class="mono">→ PresentationAccepted</span></div>
+      </div>
+      <div class="step chain">
+        <div class="step-head"><span class="step-num chain">10</span>AgentAccessGate</div>
+        <div class="step-body">onlyVerifiedAgent(nullifier) — replay blocked<br/><span class="mono">revert NullifierAlreadyActive</span></div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<div class="zk-bar">
+  <span class="icon">🔒</span>
+  <span>
+    <strong>Zero-Knowledge Privacy:</strong> Verifier learns only that the credential satisfies the predicate — no credential values revealed.
+    Nullifier is context-scoped: <code>nullifier = H(secret, Poseidon(verifier, policyId, nonce))</code> — unlinkable across verifiers &amp; policies.
+    Replay blocked by <code>NullifierRegistry</code> without revealing agent identity.
+  </span>
+</div>
+
+</body>
+</html>

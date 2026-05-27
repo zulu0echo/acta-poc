@@ -1,6 +1,7 @@
 import { expect } from 'chai'
 import { OpenACAdapter } from '../src/openacAdapter'
 import type { PredicateProgram } from '@acta/shared'
+import { initPoseidon } from '@acta/shared'
 import { createEthrDIDIdentity } from '../src/didEthrSetup'
 
 describe('Holder — OpenAC Adapter', () => {
@@ -8,6 +9,7 @@ describe('Holder — OpenAC Adapter', () => {
   let identity: Awaited<ReturnType<typeof createEthrDIDIdentity>>
 
   before(async () => {
+    await initPoseidon()
     identity = await createEthrDIDIdentity()
     adapter  = new OpenACAdapter()
   })

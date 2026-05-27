@@ -38,12 +38,12 @@ async function main() {
   const credentialAnchorAddr = await credentialAnchor.getAddress()
   console.log(`OpenACCredentialAnchor deployed to: ${credentialAnchorAddr}`)
 
-  // ── 3. OpenACSnarkVerifier ────────────────────────────────────────────
-  const OpenACSnarkVerifier = await ethers.getContractFactory('OpenACSnarkVerifier')
-  const snarkVerifier = await OpenACSnarkVerifier.deploy()
+  // ── 3. TestOpenACSnarkVerifier (local dev only) ───────────────────────
+  const TestOpenACSnarkVerifier = await ethers.getContractFactory('TestOpenACSnarkVerifier')
+  const snarkVerifier = await TestOpenACSnarkVerifier.deploy()
   await snarkVerifier.waitForDeployment()
   const snarkVerifierAddr = await snarkVerifier.getAddress()
-  console.log(`OpenACSnarkVerifier deployed to: ${snarkVerifierAddr}`)
+  console.log(`TestOpenACSnarkVerifier deployed to: ${snarkVerifierAddr}`)
 
   // ── 4. GeneralizedPredicateVerifier ───────────────────────────────────
   const GeneralizedPredicateVerifier = await ethers.getContractFactory('GeneralizedPredicateVerifier')
@@ -103,6 +103,7 @@ async function main() {
     NullifierRegistry:         nullifierRegistryAddr,
     OpenACCredentialAnchor:    credentialAnchorAddr,
     OpenACSnarkVerifier:       snarkVerifierAddr,
+    TestOpenACSnarkVerifier:   snarkVerifierAddr,
     GeneralizedPredicateVerifier: gpVerifierAddr,
     ZKReputationAccumulator:   reputationAccumulatorAddr,
     AgentAccessGate:           agentAccessGateAddr,

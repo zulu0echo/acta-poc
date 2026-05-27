@@ -1,0 +1,67 @@
+---
+description: Keep all docs, diagrams, and demo copy in sync when changing ACTA (PM ownership)
+alwaysApply: true
+---
+
+# ACTA documentation sync (product manager rule)
+
+Treat documentation as part of the deliverable. A code change is incomplete until every affected surface below is updated in the same PR.
+
+## Documentation inventory
+
+| Surface | Path | Audience |
+|---------|------|----------|
+| Root overview | `README.md` | Everyone |
+| PM guide | `docs/PM_GUIDE.md` | PMs, partners |
+| Architecture | `docs/ARCHITECTURE.md` | Engineers, auditors |
+| Protocol flow | `docs/FLOW.md` | Engineers |
+| API reference | `docs/API_REFERENCE.md` | Integrators |
+| Normative spec | `docs/SPEC.md` | Spec readers |
+| Mermaid diagrams | `docs/diagrams/*.mermaid` | Engineers |
+| Standalone diagram | `docs/protocol-diagram.html` | Presentations |
+| OpenAC SDK | `openac-sdk/README.md` | SDK users |
+| Demo embedded docs | `packages/demo-app/src/components/DocsPage.tsx` | Demo users |
+| Demo spec view | `packages/demo-app/src/components/SpecPage.tsx` | Demo users |
+| Demo step copy | `packages/demo-app/src/components/DocPanel.tsx` | Demo users |
+| Demo steps UI | `packages/demo-app/src/components/steps/Step*.tsx` | Demo users |
+| Demo flow graph | `packages/demo-app/src/components/FlowDiagram.tsx` | Demo users |
+| Simulation | `packages/demo-app/src/simulation/*` | Demo behavior |
+
+## Change-type checklist
+
+**Protocol / flow / actors / step count**
+- Update `docs/FLOW.md`, all four `docs/diagrams/*.mermaid`, `docs/protocol-diagram.html`, `DocsPage.tsx` (incl. embedded Mermaid), `FlowDiagram.tsx`, `DocPanel.tsx`, `Step*.tsx`, `SimulationEngine.ts`, `README.md` demo section, `PM_GUIDE.md` if user-facing steps change.
+
+**Architecture / layers / trust model**
+- Update `docs/ARCHITECTURE.md`, `README.md` architecture table, `DocsPage.tsx` architecture section, `PM_GUIDE.md` plain-language sections.
+
+**Contracts / on-chain behavior**
+- Update `ARCHITECTURE.md`, `FLOW.md`, `onchain-execution-flow.mermaid`, `DocsPage.tsx` contracts + security sections, `SpecPage.tsx` + `docs/SPEC.md` if normative behavior changed.
+
+**Verifier / holder / issuer APIs**
+- Update `docs/API_REFERENCE.md`, package READMEs if any, `DocsPage.tsx` SDK sections, `DocPanel.tsx` code snippets, `PM_GUIDE.md` integration checklist.
+
+**Credential schema / predicate / circuits**
+- Update `ARCHITECTURE.md`, `SPEC.md`, `SpecPage.tsx`, `DocsPage.tsx` credential/circuit sections, demo schema defaults in `Step2Schema.tsx` / `SimulationEngine.ts`.
+
+**Security / deployment / env**
+- Update `README.md` Security Notice, `DocsPage.tsx` deployment/security, `.env.example`, `docker-compose.yml` comments if ports/services change.
+
+## Consistency rules
+
+1. **Single source of truth**: Normative protocol text lives in `docs/SPEC.md`. `SpecPage.tsx` must mirror it (not diverge). Engineer detail lives in `ARCHITECTURE.md` + `FLOW.md`; PM narrative in `PM_GUIDE.md`.
+2. **Diagrams**: If you change a flow in code or `FLOW.md`, update the matching `.mermaid` file and any duplicate (HTML, `DocsPage.tsx` iframe, `protocol-diagram.html`).
+3. **Demo steps**: The demo has 10 steps. Step titles, order, and `DocPanel` copy must match `README.md` and `FLOW.md`.
+4. **No stale references**: Grep for renamed symbols, paths, ports, contract names, and step numbers across `docs/`, `README.md`, and `packages/demo-app/`.
+5. **Audience-appropriate tone**: `PM_GUIDE.md` = plain language, no jargon dumps; `ARCHITECTURE.md` / `FLOW.md` = precise technical; `README.md` = concise index with links.
+
+## PR completion gate
+
+Before marking work done, confirm:
+
+- [ ] Every inventory row touched by the change is updated
+- [ ] `grep -r '<old_name>' docs packages/demo-app README.md` returns nothing unintended
+- [ ] Demo still matches documented step count and actor names (Issuer / Holder / Verifier)
+- [ ] `README.md` documentation table lists any new `docs/*.md` files
+
+Full copy-paste PM agent prompt: `docs/PM_AGENT_PROMPT.md`.

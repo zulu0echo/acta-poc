@@ -70,10 +70,11 @@ export interface OpenACPresentation {
 
 export interface PublicSignals {
   nullifier: string                // bytes32 hex — unique per (credential, verifier, policy)
-  contextHash: string              // bytes32 hex
-  predicateProgramHash: string     // bytes32 hex
+  contextHash: string              // bytes32 hex — Poseidon(verifier, policyId, nonce)
+  predicateProgramHash: string     // bytes32 hex — Poseidon(predicate circuit inputs)
   issuerPubKeyCommitment: string   // bytes32 hex
   credentialMerkleRoot: string     // bytes32 hex
+  credentialCommitment: string     // bytes32 hex — Poseidon(attrs, randomness)
   expiryBlock: number              // block number after which proof is invalid
 }
 

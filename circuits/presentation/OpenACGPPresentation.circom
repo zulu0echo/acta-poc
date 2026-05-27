@@ -30,9 +30,10 @@ include "../lib/MerkleProof.circom";
  * Public inputs/outputs (all become pubSignals on-chain):
  *   nullifier               — context-scoped anonymous identifier
  *   contextHash             — keccak256(verifier || policy || nonce)
- *   predicateProgramHash    — hash of the predicate program (circuit enforces satisfaction)
+ *   predicateProgramHash    — Poseidon(min, capMask, sanctions[8]) bound in-circuit
  *   issuerPubKeyCommitment  — commitment to issuer's public key
  *   credentialMerkleRoot    — Merkle root of credential's attribute tree
+ *   credentialCommitment    — Poseidon(attributeValues[], randomness) — checked on-chain vs anchor
  *   expiryBlock             — block number after which proof is invalid
  *
  * Private inputs:
@@ -47,7 +48,6 @@ include "../lib/MerkleProof.circom";
  *   predicateAuditScoreMin  — minimum audit score (0 to disable)
  *   predicateCapabilityMask — required capability bits (0 to disable)
  *   predicateJurisdictionSanctions[8] — banned jurisdiction numerics (0 = unused slot)
- *   predicateProgramHash    — hash of predicate (re-derived in circuit for binding)
  */
 template OpenACGPPresentation() {
     var ATTR_COUNT = 16;
@@ -65,20 +65,20 @@ template OpenACGPPresentation() {
     signal input predicateAuditScoreMin;
     signal input predicateCapabilityMask;
     signal input predicateJurisdictionSanctions[SANCTION_SLOTS];
-    signal input predicateProgramHashPrivate;
 
     // ── Public outputs ─────────────────────────────────────────────────────
     signal output nullifier;
-    signal output contextHash;       // Verified on-chain, computed off-circuit
+    signal output contextHash;
     signal output predicateProgramHash;
     signal output issuerPubKeyCommitment;
     signal output credentialMerkleRoot;
+    signal output credentialCommitmentOut;
     signal output expiryBlock;
 
     // ── Expose private → public ────────────────────────────────────────────
     issuerPubKeyCommitment <== issuerPubKeyCommitmentPrivate;
     expiryBlock <== expiryBlockPrivate;
-    predicateProgramHash <== predicateProgramHashPrivate;
+    credentialCommitmentOut <== credentialCommitment;
 
     // ── 1. Verify credential commitment ────────────────────────────────────
     component commitHasher = Poseidon(ATTR_COUNT + 1);
@@ -175,6 +175,15 @@ template OpenACGPPresentation() {
         jGate === 0;
     }
 
+    // ── 3d. Bind predicateProgramHash to witness predicate parameters ───────
+    component predHasher = Poseidon(10);
+    predHasher.inputs[0] <== predicateAuditScoreMin;
+    predHasher.inputs[1] <== predicateCapabilityMask;
+    for (var k = 0; k < SANCTION_SLOTS; k++) {
+        predHasher.inputs[2 + k] <== predicateJurisdictionSanctions[k];
+    }
+    predicateProgramHash <== predHasher.out;
+
     // ── 4. Derive nullifier ────────────────────────────────────────────────
     component credSecret = Poseidon(2);
     credSecret.inputs[0] <== credentialCommitment;
@@ -205,5 +214,5 @@ template OpenACGPPresentation() {
 
 component main {public [
     nullifier, contextHash, predicateProgramHash,
-    issuerPubKeyCommitment, credentialMerkleRoot, expiryBlock
+    issuerPubKeyCommitment, credentialMerkleRoot, credentialCommitmentOut, expiryBlock
 ]} = OpenACGPPresentation();

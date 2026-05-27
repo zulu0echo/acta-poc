@@ -4,7 +4,7 @@ import type { HardhatEthersSigner } from '@nomicfoundation/hardhat-ethers/signer
 import type {
   NullifierRegistry,
   OpenACCredentialAnchor,
-  OpenACSnarkVerifier,
+  TestOpenACSnarkVerifier,
   GeneralizedPredicateVerifier,
   AgentAccessGate,
 } from '../../typechain-types'
@@ -23,7 +23,7 @@ describe('ACTA Full Integration Flow', () => {
 
   let nullifierRegistry:  NullifierRegistry
   let credentialAnchor:   OpenACCredentialAnchor
-  let snarkVerifier:      OpenACSnarkVerifier
+  let snarkVerifier:      TestOpenACSnarkVerifier
   let gpVerifier:         GeneralizedPredicateVerifier
   let accessGate:         AgentAccessGate
 
@@ -51,8 +51,8 @@ describe('ACTA Full Integration Flow', () => {
       .deploy(issuer.address) as OpenACCredentialAnchor
     await credentialAnchor.waitForDeployment()
 
-    snarkVerifier = await (await ethers.getContractFactory('OpenACSnarkVerifier'))
-      .deploy() as OpenACSnarkVerifier
+    snarkVerifier = await (await ethers.getContractFactory('TestOpenACSnarkVerifier'))
+      .deploy() as TestOpenACSnarkVerifier
     await snarkVerifier.waitForDeployment()
 
     gpVerifier = await (await ethers.getContractFactory('GeneralizedPredicateVerifier'))
@@ -174,6 +174,7 @@ describe('ACTA Full Integration Flow', () => {
         BigInt(policy.predicateProgramHash),
         BigInt(policy.issuerCommitment),
         BigInt(merkleRoot),
+        BigInt(commitment),
         BigInt(expiryBlock),
       ]
     })

@@ -60,3 +60,11 @@ coverage/
 # Vite cache
 .vite/
 packages/demo-app/.vite/
+
+# Local-only / out-of-tree exploration
+zkID-mcp-test/
+
+# Stray TS build outputs in source folders (should never be committed)
+packages/**/src/**/*.js
+packages/**/src/**/*.d.ts
+!packages/**/src/**/circomlibjs.d.ts

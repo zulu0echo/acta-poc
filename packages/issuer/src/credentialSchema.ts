@@ -14,37 +14,37 @@ export const AGENT_CAPABILITY_CONTEXT = {
     'id': '@id',
     'type': '@type',
     'acta': 'https://acta.ethereum.org/vocab#',
-    'AgentCapabilityCredential': acta:AgentCapabilityCredential',
+    'AgentCapabilityCredential': 'acta:AgentCapabilityCredential',
     'auditScore': {
-      '@id':   acta:auditScore',
+      '@id':   'acta:auditScore',
       '@type': 'xsd:integer',
     },
     'modelHash': {
-      '@id': acta:modelHash',
+      '@id': 'acta:modelHash',
     },
     'operatorJurisdiction': {
-      '@id': acta:operatorJurisdiction',
+      '@id': 'acta:operatorJurisdiction',
     },
     'capabilities': {
-      '@id':         acta:capabilities',
+      '@id':         'acta:capabilities',
       '@container':  '@set',
     },
     'auditedBy': {
-      '@id': acta:auditedBy',
+      '@id': 'acta:auditedBy',
     },
     'auditDate': {
-      '@id':   acta:auditDate',
+      '@id':   'acta:auditDate',
       '@type': 'xsd:date',
     },
     'delegationDepth': {
-      '@id':   acta:delegationDepth',
+      '@id':   'acta:delegationDepth',
       '@type': 'xsd:integer',
     },
     'principalDid': {
-      '@id': acta:principalDid',
+      '@id': 'acta:principalDid',
     },
     'principalVcHash': {
-      '@id': acta:principalVcHash',
+      '@id': 'acta:principalVcHash',
     },
     'xsd': 'http://www.w3.org/2001/XMLSchema#',
   },

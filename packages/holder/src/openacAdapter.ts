@@ -36,6 +36,12 @@ import {
   JURISDICTION_NUMERIC,
   CIRCUIT_ATTRIBUTE_COUNT,
   NULL_FIELD_VALUE,
+  computeCredentialCommitment,
+  computeCredentialMerkleRoot,
+  computeContextHash,
+  hashPredicateProgramCircuit,
+  poseidonHash,
+  type PredicateProgram,
 } from '@acta/shared'
 import type {
   AgentCapabilityCredentialSubject,
@@ -48,13 +54,19 @@ import type {
 
 // Attempt to import wallet-unit-poc. Falls back to stub if not installed.
 let WalletUnit: new () => IWalletUnit
+let walletUnitAvailable = false
 try {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const mod = require('@privacy-ethereum/zkid-wallet-unit-poc')
   WalletUnit = mod.WalletUnit ?? mod.default
+  walletUnitAvailable = true
 } catch {
   WalletUnit = StubWalletUnit as unknown as new () => IWalletUnit
   console.warn('[openacAdapter] wallet-unit-poc not found — using stub for local testing')
+}
+
+export function isWalletUnitAvailable(): boolean {
+  return walletUnitAvailable
 }
 
 interface IWalletUnit {
@@ -90,6 +102,7 @@ interface IWalletUnit {
     predicateProgramHash:   bigint
     issuerPubKeyCommitment: bigint
     credentialMerkleRoot:   bigint
+    credentialCommitment:   bigint
     expiryBlock:            number
   }>
 
@@ -100,18 +113,19 @@ interface IWalletUnit {
 }
 
 /**
- * Stub WalletUnit — used when wallet-unit-poc is not installed.
- * Generates deterministic fake proofs for local development and testing.
- *
- * IMPORTANT: The stub uses keccak256 for contextHash instead of Poseidon.
- * This is acceptable ONLY in environments where contextHasher is address(0)
- * (Step 7 is skipped). Running the stub against a contract with a live
- * IPoseidonT4 contextHasher will always fail with ContextHashMismatch.
+ * Stub WalletUnit — local Hardhat / dev ONLY. Uses Poseidon helpers matching Circom.
+ * Groth16 verification is delegated to TestOpenACSnarkVerifier (sentinel proof).
  */
 class StubWalletUnit implements IWalletUnit {
   private store: Map<
     string,
-    { attributeValues: bigint[]; issuerPubKeyCommitment: bigint; randomness: bigint }
+    {
+      attributeValues: bigint[]
+      issuerPubKeyCommitment: bigint
+      randomness: bigint
+      commitment: bigint
+      merkleRoot: bigint
+    }
   > = new Map()
 
   async importCredential(params: {
@@ -122,49 +136,32 @@ class StubWalletUnit implements IWalletUnit {
     const id = ethers.keccak256(
       ethers.toUtf8Bytes(params.attributeValues.join(',') + params.randomness.toString())
     )
-    this.store.set(id, params)
-    const commitment = BigInt(ethers.keccak256(ethers.toUtf8Bytes('commitment:' + id)))
-    const merkleRoot = BigInt(ethers.keccak256(ethers.toUtf8Bytes('merkle:' + id)))
+    const commitmentHex = computeCredentialCommitment(params.attributeValues, params.randomness)
+    const merkleRootHex = computeCredentialMerkleRoot(params.attributeValues)
+    const commitment = BigInt(commitmentHex)
+    const merkleRoot = BigInt(merkleRootHex)
+    this.store.set(id, { ...params, commitment, merkleRoot })
     return { commitment, merkleRoot, credentialId: id }
   }
 
   async generateProof(params: {
-    credentialId:    string
+    credentialId: string
     predicateProgram: unknown
     verifierAddress: string
-    policyId:        string
-    nonce:           bigint
-    expiryBlock:     number
+    policyId: string
+    nonce: bigint
+    expiryBlock: number
   }) {
-    // Stub contextHash approximation: keccak256(verifier || policyId || nonce).
-    // This differs from the circuit's Poseidon output. Only valid when
-    // contextHasher is address(0) (test environment — Step 7 is skipped).
+    const cred = this.store.get(params.credentialId)!
+    const program = params.predicateProgram as PredicateProgram
+    const predicateProgramHash = BigInt(hashPredicateProgramCircuit(program))
     const contextHash = BigInt(
-      ethers.keccak256(
-        ethers.solidityPacked(
-          ['address', 'bytes32', 'uint256'],
-          [params.verifierAddress, params.policyId, params.nonce]
-        )
-      )
+      computeContextHash(params.verifierAddress, params.policyId, params.nonce)
     )
 
-    const nullifier = BigInt(
-      ethers.keccak256(
-        ethers.toUtf8Bytes('nullifier:' + params.credentialId + ':' + contextHash.toString())
-      )
-    )
-    const predicateProgramHash = BigInt(
-      ethers.keccak256(
-        ethers.toUtf8Bytes('predicate:' + JSON.stringify(params.predicateProgram))
-      )
-    )
-    const cred                 = this.store.get(params.credentialId)!
-    const issuerPubKeyCommitment = cred.issuerPubKeyCommitment
-    const credentialMerkleRoot   = BigInt(
-      ethers.keccak256(ethers.toUtf8Bytes('merkle:' + params.credentialId))
-    )
+    const credSecret = poseidonHash([cred.commitment, cred.randomness])
+    const nullifier = poseidonHash([credSecret, contextHash])
 
-    // Sentinel proof bytes accepted by OpenACSnarkVerifier in test mode
     const SENTINEL = ethers.keccak256(ethers.toUtf8Bytes('OPENAC_TEST_PROOF_V1'))
     const proofBytes = Buffer.from(SENTINEL.slice(2).padEnd(512, '0'), 'hex')
 
@@ -173,8 +170,9 @@ class StubWalletUnit implements IWalletUnit {
       nullifier,
       contextHash,
       predicateProgramHash,
-      issuerPubKeyCommitment,
-      credentialMerkleRoot,
+      issuerPubKeyCommitment: cred.issuerPubKeyCommitment,
+      credentialMerkleRoot:   cred.merkleRoot,
+      credentialCommitment:   cred.commitment,
       expiryBlock: params.expiryBlock,
     }
   }
@@ -310,6 +308,7 @@ export class OpenACAdapter {
       predicateProgramHash:   '0x' + result.predicateProgramHash.toString(16).padStart(64, '0'),
       issuerPubKeyCommitment: '0x' + result.issuerPubKeyCommitment.toString(16).padStart(64, '0'),
       credentialMerkleRoot:   '0x' + result.credentialMerkleRoot.toString(16).padStart(64, '0'),
+      credentialCommitment:   '0x' + result.credentialCommitment.toString(16).padStart(64, '0'),
       expiryBlock:            result.expiryBlock,
     }
 
@@ -336,6 +335,7 @@ export class OpenACAdapter {
       BigInt(signals.predicateProgramHash),
       BigInt(signals.issuerPubKeyCommitment),
       BigInt(signals.credentialMerkleRoot),
+      BigInt(signals.credentialCommitment),
       BigInt(signals.expiryBlock),
     ]
 
@@ -403,6 +403,19 @@ export function verifyJwtSignature(jwt: string, signerAddress: string): boolean 
     const digest   = ethers.keccak256(ethers.toUtf8Bytes(sigInput))
     const sigHex   = '0x' + Buffer.from(parts[2], 'base64url').toString('hex')
     if (sigHex.length < 130) return false  // r(32) + s(32) = 64 bytes = 128 hex + '0x'
+
+    // Enforce low-s to reduce malleability. This is a standard hardening for ECDSA
+    // signatures and prevents multiple distinct signatures over the same message.
+    // See: EIP-2 (low-s rule for Ethereum signatures).
+    const SECP256K1_N =
+      0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141n
+    const SECP256K1_HALF_N = SECP256K1_N / 2n
+
+    const r = BigInt('0x' + sigHex.slice(2, 66))
+    const s = BigInt('0x' + sigHex.slice(66, 130))
+    if (r === 0n || s === 0n) return false
+    if (s > SECP256K1_HALF_N) return false
+
     for (const v of [27, 28]) {
       try {
         const recovered = ethers.recoverAddress(digest, {

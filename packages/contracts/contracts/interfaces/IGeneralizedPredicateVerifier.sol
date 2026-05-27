@@ -41,7 +41,9 @@ interface IGeneralizedPredicateVerifier {
     error PredicateHashMismatch(bytes32 got, bytes32 expected);
     error ExpiryBlockPassed(uint256 expiryBlock, uint256 currentBlock);
     error MerkleRootNotCurrent(bytes32 merkleRoot);
+    error CommitmentMismatch(bytes32 got, bytes32 expected);
     error IssuerCommitmentMismatch(bytes32 got, bytes32 expected);
+    error ContextHasherNotConfigured();
     error ContextHashMismatch(bytes32 got, bytes32 expected);
     error ProofInvalid();
     error NullifierConflict(bytes32 nullifier);

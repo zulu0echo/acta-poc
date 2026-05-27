@@ -1,3 +1,6 @@
 export * from './types'
 export * from './constants'
 export * from './predicateHash'
+export * from './predicateCircuit'
+export * from './poseidon'
+export * from './credentialPoseidon'

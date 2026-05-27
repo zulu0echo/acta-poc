@@ -1,19 +1,21 @@
 import { ethers } from 'ethers'
 import type { PredicateProgram, PredicateNode, PredicateCondition } from './types'
+import { hashPredicateProgramCircuit } from './predicateCircuit'
 
 /**
- * Computes a deterministic bytes32 hash of a PredicateProgram.
+ * Computes the on-chain predicateProgramHash for OpenACGPPresentation.
  *
- * The canonical serialisation walks the predicate tree in depth-first order,
- * encoding each node into a fixed tuple and hashing the concatenated result
- * with keccak256. This matches the on-chain hash computed in
- * GeneralizedPredicateVerifier._hashPredicateProgram().
- *
- * Security property: two PredicatePrograms produce the same hash if and only
- * if they express identical logical constraints over identical attribute indices.
- * Operator ordering (AND vs OR) is included in the hash.
+ * Uses Poseidon(min, capabilityMask, sanctionSlots[8]) so the hash is bound
+ * in-circuit to the same witness fields (see circuits/presentation/OpenACGPPresentation.circom).
  */
 export function hashPredicateProgram(program: PredicateProgram): string {
+  return hashPredicateProgramCircuit(program)
+}
+
+/**
+ * Legacy keccak256 hash of canonical JSON (pre-audit). Do not use for new policies.
+ */
+export function hashPredicateProgramLegacy(program: PredicateProgram): string {
   const canonical = canonicaliseProgram(program)
   return ethers.keccak256(ethers.toUtf8Bytes(canonical))
 }

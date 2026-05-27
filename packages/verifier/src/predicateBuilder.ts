@@ -1,4 +1,5 @@
 import { hashPredicateProgram, describePredicateProgram, validatePredicateProgram } from '@acta/shared'
+import { validatePredicateProgramSupported } from '@acta/shared'
 import type {
   PredicateProgram,
   PredicateNode,
@@ -89,6 +90,7 @@ export class PredicateBuilder {
     }
 
     validatePredicateProgram(program)
+    validatePredicateProgramSupported(program)
     const hash = hashPredicateProgram(program)
     program.hash = hash
 
@@ -186,17 +188,9 @@ function applyAgentOperator(builder: PredicateBuilder, op: AgentPredicateOperato
     case 'jurisdiction_not_in':
       builder.require('operatorJurisdiction').notIn(op.sanctionsList)
       break
-    case 'model_hash_in':
-      builder.require('modelHash').includes(op.trustedSet[0] ?? '')
-      break
-    case 'delegation_depth_lte':
-      builder.require('delegationDepth').lessThanOrEqual(op.maxDepth)
-      break
-    case 'delegation_scope_includes':
-      builder.require('capabilities').includes(op.scopeId)
-      break
-    case 'principal_vc_satisfies':
-      builder.require('principalVcHash').notEquals('')
-      break
+    default:
+      throw new Error(
+        `Operator "${op.op}" is not enforced by OpenACGPPresentation — use audit_score_gte, capability_includes, or jurisdiction_not_in`
+      )
   }
 }

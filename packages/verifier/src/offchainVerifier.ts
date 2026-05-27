@@ -34,11 +34,23 @@ export class OffchainVerifier {
   async verifyOffchain(params: {
     presentation: OpenACPresentation
     policyId: string
+    expectedPredicateHash?: string
     issuerDid: string
     vpJwt: string
     holderDid: string
   }): Promise<{ valid: boolean; reason?: string; timingMs?: number }> {
     const start = Date.now()
+
+    if (params.expectedPredicateHash) {
+      const got = params.presentation.publicSignals.predicateProgramHash.toLowerCase()
+      const expected = params.expectedPredicateHash.toLowerCase()
+      if (got !== expected) {
+        return {
+          valid: false,
+          reason: `Predicate hash mismatch: proof has ${got}, policy expects ${expected}`,
+        }
+      }
+    }
 
     // Verify ZK proof and issuer commitment
     const zkResult = await this.openacAdapter.verifyPresentation(
@@ -52,7 +64,7 @@ export class OffchainVerifier {
     }
 
     // Verify VP JWT structure (holder did:ethr must match iss claim)
-    const vpCheck = verifyVPJwtStructure(params.vpJwt, params.holderDid)
+    const vpCheck = verifyVPJwtStructure(params.vpJwt, params.holderDid, this.identity.did)
     if (!vpCheck.valid) {
       return { valid: false, reason: `VP JWT invalid: ${vpCheck.reason}` }
     }
@@ -74,7 +86,8 @@ export class OffchainVerifier {
 
 function verifyVPJwtStructure(
   vpJwt: string,
-  expectedHolderDid: string
+  expectedHolderDid: string,
+  expectedVerifierDid: string
 ): { valid: boolean; reason?: string } {
   try {
     const parts = vpJwt.split('.')
@@ -85,6 +98,17 @@ function verifyVPJwtStructure(
     if (payload.iss !== expectedHolderDid) {
       return { valid: false, reason: `VP JWT iss "${payload.iss}" does not match holder DID "${expectedHolderDid}"` }
     }
+
+    // Audience binding: the holder signs specifically for the verifier requesting it.
+    if (payload.aud && payload.aud !== expectedVerifierDid) {
+      return { valid: false, reason: `VP JWT aud must be ${expectedVerifierDid}` }
+    }
+
+    // Basic expiry check.
+    if (typeof payload.exp === 'number' && payload.exp < Math.floor(Date.now() / 1000)) {
+      return { valid: false, reason: 'VP JWT is expired' }
+    }
+
     if (!payload.vp?.verifiableCredential?.length) {
       return { valid: false, reason: 'VP JWT missing verifiableCredential' }
     }

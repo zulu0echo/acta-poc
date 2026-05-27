@@ -69,6 +69,7 @@ export class OnchainSubmitter {
       BigInt(publicSignals.predicateProgramHash),
       BigInt(publicSignals.issuerPubKeyCommitment),
       BigInt(publicSignals.credentialMerkleRoot),
+      BigInt(publicSignals.credentialCommitment),
       BigInt(publicSignals.expiryBlock),
     ]
 
