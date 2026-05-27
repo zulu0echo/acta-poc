@@ -22,14 +22,16 @@ See [Interactive Demo](#interactive-demo) section for details.
 ```
 acta-poc/
 ├── packages/
-│   ├── shared/         # Shared types, constants, PredicateHash utilities
+│   ├── shared/         # Shared types, constants, predicate hashing, zkID GP IR
+│   ├── sdk/            # @acta/sdk — public integration surface (predicate + stealth in v0.3)
 │   ├── issuer/         # Credo.ts + OID4VCI issuer node (Express, port 3001)
 │   ├── holder/         # Credo.ts + OpenAC wallet-unit-poc adapter (Express, port 3002)
 │   ├── verifier/       # Credo.ts + OID4VP + Predicate SDK (Express, port 3003)
 │   ├── contracts/      # Hardhat + Solidity (NullifierRegistry, GPVerifier, etc.)
 │   └── demo-app/       # React 18 + Vite + Tailwind interactive demo (port 5173)
-├── circuits/           # Circom 2.x ZK circuits (OpenACGPPresentation)
-├── docs/               # ARCHITECTURE.md, FLOW.md, PM_GUIDE.md, API_REFERENCE.md
+├── circuits/           # Circom 2.x ZK circuits (V1 production, V2 draft for zkID GP)
+├── docs/               # ARCHITECTURE.md, FLOW.md, PM_GUIDE.md, API_REFERENCE.md,
+│                       # ROADMAP.md, SECURITY_AUDIT.md, adr/0001-0004
 └── docker-compose.yml  # Full local stack
 ```
 
@@ -249,6 +251,11 @@ See [docs/API_REFERENCE.md](./docs/API_REFERENCE.md) for the full API.
 | [docs/API_REFERENCE.md](./docs/API_REFERENCE.md) | Integrators | Complete Verifier SDK API reference |
 | [docs/PM_AGENT_PROMPT.md](./docs/PM_AGENT_PROMPT.md) | PMs, AI agents | Copy-paste prompt: keep all docs and demo in sync on every change |
 | [docs/SECURITY_AUDIT.md](./docs/SECURITY_AUDIT.md) | Engineers, auditors | Security findings and remediation tracker |
+| [docs/ROADMAP.md](./docs/ROADMAP.md) | Everyone | Phase-ordered execution plan for zkID parity, unlinkability, and devex |
+| [docs/adr/0001-zkid-generalized-predicates.md](./docs/adr/0001-zkid-generalized-predicates.md) | Engineers | Adopt zkID generalized-predicates as ACTA's predicate model |
+| [docs/adr/0002-stealth-addresses-for-unlinkability.md](./docs/adr/0002-stealth-addresses-for-unlinkability.md) | Engineers | Stealth addresses per (verifier, policyId, sessionIndex) |
+| [docs/adr/0003-anchor-by-holder-commitment.md](./docs/adr/0003-anchor-by-holder-commitment.md) | Engineers | Anchor credentials by holder-commitment, not by raw agentId |
+| [docs/adr/0004-acta-sdk-package.md](./docs/adr/0004-acta-sdk-package.md) | Engineers, PMs | Ship `@acta/sdk` as the public integration surface |
 
 ---
 
@@ -295,6 +302,28 @@ This is a proof-of-concept implementation. The items below must be resolved befo
 9. **RPC security**: Use authenticated RPC endpoints (Alchemy/Infura API key), not public ones
 10. **wallet-unit-poc stability**: The OpenAC library must reach production stability
 11. **Credential rotation**: Test `rotateCredential()` flow — `anchorCredential()` reverts `ActiveAnchorExists` if a live anchor already exists
+
+---
+
+## What's next (v0.3 → v1.0)
+
+Concrete roadmap lives in [`docs/ROADMAP.md`](./docs/ROADMAP.md). Highlights shipped in v0.3:
+
+| Capability | Status | Path |
+|------------|--------|------|
+| zkID generalized-predicate IR + canonical hash | shipped | `packages/shared/src/gp/` |
+| Off-circuit predicate compiler + encoder + unit tests | shipped | `packages/shared/src/gp/`, `packages/shared/test/gp.test.ts` |
+| Stealth-address derivation (HKDF-SHA256 + secp256k1) | shipped | `packages/holder/src/stealth.ts` |
+| `@acta/sdk` skeleton with `predicate` + `stealth` surfaces | shipped | `packages/sdk/` |
+| Circom V2 circuit implementing zkID GP | **draft** — pending ZK-engineer review + ceremony | `circuits/presentation/OpenACGPPresentationV2.circom` |
+| Anchor V2 (by holder-commitment) | planned (v0.5) | tracked in ROADMAP Phase 2 |
+| End-to-end holder + verifier on V2 + stealth | planned (v0.5) | tracked in ROADMAP Phase 2 |
+| `@acta/sdk` issuer/holder/verifier clients + CLI | planned (v0.6) | tracked in ROADMAP Phase 3 |
+
+ADR index: [0001 (zkID GP)](./docs/adr/0001-zkid-generalized-predicates.md) ·
+[0002 (stealth addresses)](./docs/adr/0002-stealth-addresses-for-unlinkability.md) ·
+[0003 (anchor-by-commitment)](./docs/adr/0003-anchor-by-holder-commitment.md) ·
+[0004 (`@acta/sdk`)](./docs/adr/0004-acta-sdk-package.md).
 
 ---
 

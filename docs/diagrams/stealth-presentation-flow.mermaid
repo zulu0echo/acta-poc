@@ -1,0 +1,44 @@
+%% Stealth-address presentation flow (ACTA v0.5 target)
+%% Source: docs/adr/0002-stealth-addresses-for-unlinkability.md
+%%
+%% Same credential, two presentations to two verifiers — the holder uses two
+%% independent stealth addresses, and there is no on-chain correlation
+%% between them.
+
+sequenceDiagram
+    autonumber
+    participant H as Holder (master secret)
+    participant SA1 as Stealth addr S1
+    participant SA2 as Stealth addr S2
+    participant V1 as Verifier V1
+    participant V2 as Verifier V2
+    participant GP as GeneralizedPredicateVerifier (on-chain)
+    participant NR as NullifierRegistry
+
+    Note over H: holderMaster (256-bit) held in holder wallet only
+
+    rect rgba(120, 160, 220, 0.15)
+        Note over H,V1: Presentation #1 to V1
+        H->>H: S1 = deriveStealth(holderMaster, V1.addr, policy1, session=0)
+        V1->>H: OID4VP request (policyId=policy1, nonce=n1)
+        H->>H: build zk proof + VP JWT signed by S1.priv
+        H->>V1: VP JWT (iss = did:ethr(S1.addr))
+        V1->>GP: verifyAndRegister(proof, pubSignals)  via S1 funded by holder
+        Note over GP: msg.sender = S1.addr (single-use stealth)
+        GP->>NR: registerNullifier(nullifier1, ctxHash1)
+        GP-->>V1: PresentationAccepted(policy1, nullifier1)
+    end
+
+    rect rgba(220, 160, 120, 0.15)
+        Note over H,V2: Presentation #2 to V2 (same credential)
+        H->>H: S2 = deriveStealth(holderMaster, V2.addr, policy2, session=0)
+        V2->>H: OID4VP request (policyId=policy2, nonce=n2)
+        H->>H: build zk proof + VP JWT signed by S2.priv
+        H->>V2: VP JWT (iss = did:ethr(S2.addr))
+        V2->>GP: verifyAndRegister(proof, pubSignals)  via S2 funded by holder
+        Note over GP: msg.sender = S2.addr (independent of S1)
+        GP->>NR: registerNullifier(nullifier2, ctxHash2)
+        GP-->>V2: PresentationAccepted(policy2, nullifier2)
+    end
+
+    Note over GP: S1.addr ≠ S2.addr (computationally unlinkable)<br/>nullifier1 ≠ nullifier2 (context-scoped)<br/>No on-chain map ties S1 ↔ S2 ↔ master

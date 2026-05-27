@@ -1,12 +1,17 @@
 {
-  "name": "@acta/shared",
-  "version": "0.1.0",
+  "name": "@acta/sdk",
+  "version": "0.3.0",
+  "description": "ACTA — Anonymous Credentials for Trustless Agents. Single integration surface for issuer, holder, verifier, and predicates.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
     "test": "TS_NODE_TRANSPILE_ONLY=true mocha --require ts-node/register 'test/**/*.ts' --timeout 30000"
+  },
+  "dependencies": {
+    "@acta/shared": "*",
+    "ethers": "^6.11.1"
   },
   "devDependencies": {
     "@types/chai": "^4.3.16",
@@ -16,8 +21,5 @@
     "mocha": "^10.4.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.4.5"
-  },
-  "dependencies": {
-    "ethers": "^6.11.1"
   }
 }

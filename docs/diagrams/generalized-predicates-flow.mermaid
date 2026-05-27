@@ -1,0 +1,33 @@
+%% zkID generalized-predicates flow (ACTA v0.4 target)
+%% Source: docs/adr/0001-zkid-generalized-predicates.md
+%%
+%% End-to-end path of a predicate program from a verifier-authored string
+%% to an on-chain predicateProgramHash check.
+
+flowchart LR
+    subgraph Verifier
+        A1["Predicate string<br/>(age_unix ≤ X) AND (jur == Y OR jur == Z)"]
+        A2["@acta/sdk predicate.builder()"]
+        A3["GPProgram IR<br/>(predicates + postfix expression)"]
+        A4["encode + Poseidon fold"]
+        A5["predicateProgramHash"]
+        A6["PolicyRegistry.registerPolicy()"]
+    end
+
+    subgraph Holder
+        B1["Receive OID4VP request"]
+        B2["@acta/shared/gp.encodeProgram()<br/>+ stack-trace builder"]
+        B3["snarkjs Groth16 proof<br/>OpenACGPPresentationV2.circom"]
+    end
+
+    subgraph "On-chain"
+        C1["GeneralizedPredicateVerifier.verifyAndRegister"]
+        C2["Snark verifyProof()"]
+        C3["Compare pubSignals[2]<br/>== policy.predicateProgramHash"]
+        C4["PresentationAccepted event"]
+    end
+
+    A1 --> A2 --> A3 --> A4 --> A5 --> A6
+    A3 -.same IR.-> B1
+    B1 --> B2 --> B3 --> C1 --> C2 --> C3 --> C4
+    A5 -.policyId binds to hash.-> C3

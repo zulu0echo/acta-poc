@@ -8,7 +8,8 @@
     "packages/holder",
     "packages/verifier",
     "packages/contracts",
-    "packages/demo-app"
+    "packages/demo-app",
+    "packages/sdk"
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",

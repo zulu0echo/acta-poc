@@ -184,8 +184,8 @@
 | Field | Value |
 |-------|-------|
 | **Category** | Anonymity |
-| **Status** | **Mitigated (operational)** |
-| **Remediation** | Use ephemeral holder Ethereum addresses per verifier session/protocol (new `did:ethr` → new `agentId` → new on-chain anchor). This reduces cross-protocol / cross-session linkability; on-chain `agentId` still links within the same ephemeral identity. |
+| **Status** | **Mitigated (operational); cryptographic fix planned in v0.5** |
+| **Remediation (v0.3)** | Two layers shipped: (1) stealth-address derivation per `(verifier, policyId, sessionIndex)` in `packages/holder/src/stealth.ts` — ADR-0002; (2) ADR-0003 for anchor-by-holder-commitment, removing the on-chain address↔commitment map. Holder + anchor wiring lands in v0.5 — see `docs/ROADMAP.md` Phase 2. Until then, the operational mitigation (ephemeral `did:ethr` identities) remains in force. |
 
 ---
 
@@ -266,6 +266,19 @@ Before any public network deployment:
 |------|--------|
 | 2026-05-27 | Initial audit (Passes 1–3) |
 | 2026-05-27 | Remediation: circuit v0.2 (7 pub signals), GP verifier Step 5b, predicate Poseidon hash, test/production verifier split, holder/verifier/issuer hardening |
+| 2026-05-27 | v0.3: zkID GP IR + canonical hash shipped in `@acta/shared/gp` (ADR-0001); stealth-address derivation shipped in `@acta/holder/stealth` (ADR-0002); Circom V2 draft (`OpenACGPPresentationV2.circom`); `@acta/sdk` skeleton (ADR-0004); roadmap published. |
+
+---
+
+## Open architectural improvements (v0.3 → v0.5)
+
+The audit findings are remediated in code (v0.2) and operationally (ACTA-013/014/017).
+The cryptographic improvements that *fully* close those mitigations are tracked in
+[`docs/ROADMAP.md`](./ROADMAP.md):
+
+- Phase 1 (v0.4): zkID generalized-predicate circuit V2 ships → ACTA-004/005 superseded by parity tests.
+- Phase 2 (v0.5): anchor-by-holder-commitment + stealth-address presentation flow → ACTA-013/014 closed cryptographically.
+- Phase 3 (v0.6): `@acta/sdk` clients + CLI + conformance suite → integration audit surface stabilised.
 
 ---
 

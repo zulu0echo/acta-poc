@@ -17,9 +17,13 @@ Treat documentation as part of the deliverable. A code change is incomplete unti
 | Protocol flow | `docs/FLOW.md` | Engineers |
 | API reference | `docs/API_REFERENCE.md` | Integrators |
 | Normative spec | `docs/SPEC.md` | Spec readers |
+| Roadmap | `docs/ROADMAP.md` | Everyone |
+| Security audit | `docs/SECURITY_AUDIT.md` | Engineers, auditors |
+| ADRs | `docs/adr/*.md` | Engineers |
 | Mermaid diagrams | `docs/diagrams/*.mermaid` | Engineers |
 | Standalone diagram | `docs/protocol-diagram.html` | Presentations |
 | OpenAC SDK | `openac-sdk/README.md` | SDK users |
+| `@acta/sdk` | `packages/sdk/README.md` | Integrators |
 | Demo embedded docs | `packages/demo-app/src/components/DocsPage.tsx` | Demo users |
 | Demo spec view | `packages/demo-app/src/components/SpecPage.tsx` | Demo users |
 | Demo step copy | `packages/demo-app/src/components/DocPanel.tsx` | Demo users |
