@@ -19,7 +19,7 @@ It is organised into versioned phases. Each phase has acceptance criteria, ADR p
 |-----|-------|
 | `v0.2` | Audit remediation — Critical/High/Medium findings, ceremony-required production verifier (shipped). |
 | `v0.3` | zkID GP IR shipped off-chain (TypeScript), stealth-address derivation, ADRs published, draft Circom V2. |
-| `v0.4` | Circom V2 (generalized predicates) compiles + ceremony; holder + verifier wired to V2. |
+| `v0.4` | JS witness builder, `PredicateBuilderV2`, `OpenACAdapterV2`, off-chain V2 path, ceremony script. Live ceremony still pending toolchain. |
 | `v0.5` | Anchor-by-commitment + stealth-address end-to-end; legacy `agentId` removed from public surface. |
 | `v0.6` | `@acta/sdk` (issuer + holder + verifier API), CLI (`acta`), conformance suite, OpenAPI. |
 | `v1.0` | Audited Solidity + audited Circom + cross-team interop test against zkID `wallet-unit-poc`. |
@@ -44,15 +44,24 @@ It is organised into versioned phases. Each phase has acceptance criteria, ADR p
 | Canonical Poseidon hash (`predicateProgramHash`) over GP IR | **Shipped (v0.3)** | `packages/shared/src/gp/encoder.ts` |
 | Unit tests for IR + compiler + encoder | **Shipped (v0.3)** | `packages/shared/test/gp/` |
 | Circom V2 circuit (`OpenACGPPresentationV2.circom`) | **Draft (v0.3)** — needs ZK-engineer review and re-ceremony | `circuits/presentation/OpenACGPPresentationV2.circom` |
-| Circom V2 unit witness generator (JS) | **Open (v0.4)** | `circuits/test/openacGPPresentationV2.test.ts` |
-| Trusted setup ceremony for V2 | **Open (v0.4)** | `packages/contracts/scripts/setup-circuits-v2.sh` |
-| Holder switch to V2 (`OpenACAdapter`) | **Open (v0.4)** | `packages/holder/src/openacAdapter.ts` |
-| Verifier switch to V2 (off-chain + on-chain) | **Open (v0.4)** | `packages/verifier/src/offchainVerifier.ts`, `GeneralizedPredicateVerifier.sol` |
-| `PredicateBuilder` rewritten to emit GP IR (deprecate V1 builder) | **Open (v0.4)** | `packages/verifier/src/predicateBuilder.ts` |
+| JS witness builder (`buildCircuitWitness`) + snarkjs input adapter | **Shipped (v0.4)** | `packages/shared/src/gp/witness.ts` |
+| Encoder hash padded to power-of-2 leaves (matches circuit) | **Shipped (v0.4)** | `packages/shared/src/gp/encoder.ts` |
+| V1→V2 program translator (`v1ToGP`) | **Shipped (v0.4)** | `packages/shared/src/gp/v1Compat.ts` |
+| `PredicateBuilderV2` (GP-native fluent API) | **Shipped (v0.4)** | `packages/verifier/src/predicateBuilderV2.ts` |
+| `OpenACAdapterV2` + `StubWalletUnitV2` (V2 holder path) | **Shipped (v0.4)** | `packages/holder/src/openacAdapterV2.ts` |
+| `OffchainVerifier.verifyOffchainV2()` | **Shipped (v0.4)** | `packages/verifier/src/offchainVerifier.ts` |
+| `@acta/sdk` exposes `holder.*` + `verifier.*` (V2) | **Shipped (v0.4)** | `packages/sdk/src/{holder,verifier,predicate}.ts` |
+| Trusted-setup ceremony script for V2 | **Shipped (v0.4)** — pending toolchain to execute | `packages/contracts/scripts/setup-circuits-v2.sh` |
+| Live Groth16 ceremony + generated Solidity verifier | **Open (v0.4 → v0.5)** — blocked on circom 2.1.x + snarkjs 0.7 install | `circuits/build/`, `contracts/verifiers/OpenACGPV2SnarkVerifier_generated.sol` |
+| Parity vector against zkID `wallet-unit-poc` | **Open (v0.5)** — blocked on zkID publishing its prover | `packages/shared/test/gp-zkid-parity.test.ts` |
+| `GeneralizedPredicateVerifier` re-pointed at V2 Groth16 verifier | **Open (v0.4)** — comments updated; awaits live ceremony | `packages/contracts/contracts/core/GeneralizedPredicateVerifier.sol` |
+| Capability bitmask containment in GP (claim-per-bit schema) | **Open (v0.5)** | `packages/shared/src/types.ts` (schema), `packages/shared/src/gp/types.ts` |
 
 **Acceptance criteria for v0.4**:
 - A GP program `(age_unix ≤ X) AND (jurisdiction == Y OR jurisdiction == Z)` round-trips: TS encoder → witness → snarkjs Groth16 → on-chain Solidity verifier → emits `PresentationAccepted`.
 - The same predicate string compiled by ACTA produces the same `predicateProgramHash` as zkID `wallet-unit-poc` (validated by parity vector test).
+
+**v0.4 status (2026-05-27)**: every piece of the off-chain V2 stack is implemented and tested under `StubWalletUnitV2` — the holder, verifier, and SDK fully exercise the new IR, encoder, witness builder, and canonical hash end-to-end. The two outstanding items are the live Groth16 ceremony (blocked on local `circom`/`snarkjs` install) and the cross-team parity vector (blocked on zkID publishing its prover). The on-chain `GeneralizedPredicateVerifier` already uses the V1/V2-compatible 7-public-signal layout, so the only contract change required at ceremony time is re-pointing `proofVerifier`.
 
 ---
 
@@ -142,3 +151,4 @@ It is organised into versioned phases. Each phase has acceptance criteria, ADR p
 | Date | Change |
 |------|--------|
 | 2026-05-27 | Initial roadmap published alongside ADRs 0001–0004; v0.3 deliverables shipped. |
+| 2026-05-27 | v0.4 shipped: JS witness builder + V1→V2 translator + `PredicateBuilderV2` + `OpenACAdapterV2` + V2 off-chain verifier path + ceremony script + encoder hash now matches in-circuit Merkle fold (power-of-2 padding). 92 tests pass across `@acta/shared`, `@acta/verifier`, `@acta/holder`, `@acta/sdk`. Live ceremony + zkID cross-parity remain open (tooling/upstream blocked). |

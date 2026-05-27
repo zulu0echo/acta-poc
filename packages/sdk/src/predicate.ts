@@ -78,4 +78,34 @@ export function evaluate(
   return gp.evaluateProgram(program, claims)
 }
 
+/**
+ * Build the full circuit witness for a (program, claims, credential)
+ * triple. The returned witness is consumable by the V2 Groth16 circuit
+ * (after snarkjs `wtns calculate`).
+ */
+export function buildWitness(
+  program: gp.GPProgram,
+  encoded: gp.EncodedProgram,
+  credential: gp.CredentialWitnessInputs,
+  bounds: gp.GPBounds = gp.DEFAULT_GP_BOUNDS,
+): gp.WitnessBuildResult {
+  return gp.buildCircuitWitness(program, encoded, credential, bounds)
+}
+
+/** Build a JSON-serialisable snarkjs `input.json` map in one step. */
+export function buildSnarkjsInput(
+  program: gp.GPProgram,
+  claims: ReadonlyArray<bigint>,
+  credential: gp.CredentialWitnessInputs,
+  bounds: gp.GPBounds = gp.DEFAULT_GP_BOUNDS,
+): Record<string, string | string[] | string[][]> {
+  const encoded = gp.encodeProgram(program, claims, bounds)
+  return gp.buildSnarkjsInput(program, encoded, credential, bounds)
+}
+
+/** Translate a V1 `PredicateProgram` into a GP `GPProgram`. */
+export function fromV1(v1Program: Parameters<typeof gp.v1ToGP>[0]): gp.GPProgram {
+  return gp.v1ToGP(v1Program)
+}
+
 export { gp as raw }

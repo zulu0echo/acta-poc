@@ -87,6 +87,25 @@ export interface GenerateProofParams {
   expiryBlock: number
 }
 
+/**
+ * v0.4 generate-proof params for the V2 (generalised-predicate) presentation
+ * flow. `predicateProgram` is a zkID `GPProgram` (see `@acta/shared/gp`).
+ *
+ * The same on-chain `policyId` keying convention is reused so the V2
+ * presentation flow drops into the existing `GeneralizedPredicateVerifier`
+ * registry, but the V1 → V2 transition replaces the V1 hard-coded
+ * `predicateProgramHash` with the GP-canonical hash from
+ * `gp.gpProgramHash(program)`.
+ */
+export interface GenerateProofParamsV2 {
+  credentialHandle: CredentialHandle
+  predicateProgram: unknown        // gp.GPProgram (avoid circular import here)
+  policyId: string                 // bytes32 from on-chain registration
+  verifierAddress: string          // Ethereum address of verifier
+  nonce: bigint                    // session nonce
+  expiryBlock: number
+}
+
 // ─── Predicate Layer ─────────────────────────────────────────────────────────
 
 export type PredicateOperatorType =

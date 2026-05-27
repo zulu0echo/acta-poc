@@ -1,6 +1,7 @@
 import { ethers } from 'ethers'
 import type { EthrDIDIdentity } from '../../issuer/src/didEthrSetup'
 import { OpenACAdapter, verifyJwtSignature } from '../../holder/src/openacAdapter'
+import { OpenACAdapterV2 } from '../../holder/src/openacAdapterV2'
 import type { OpenACPresentation } from '@acta/shared'
 
 /**
@@ -16,9 +17,11 @@ import type { OpenACPresentation } from '@acta/shared'
  */
 export class OffchainVerifier {
   private openacAdapter: OpenACAdapter
+  private openacAdapterV2: OpenACAdapterV2
 
   constructor(private identity: EthrDIDIdentity) {
     this.openacAdapter = new OpenACAdapter()
+    this.openacAdapterV2 = new OpenACAdapterV2()
   }
 
   /**
@@ -76,6 +79,54 @@ export class OffchainVerifier {
       currentBlock = await this.identity.provider.getBlockNumber()
     } catch { /* offline dev */ }
 
+    if (currentBlock > 0 && expiryBlock <= currentBlock) {
+      return { valid: false, reason: `Presentation expired at block ${expiryBlock}` }
+    }
+
+    return { valid: true, timingMs: Date.now() - start }
+  }
+
+  /**
+   * v0.4 — verify a V2 (generalised-predicate) presentation off-chain.
+   *
+   * Differences from `verifyOffchain()`:
+   *   - Uses `OpenACAdapterV2` for proof verification (V2 sentinel today,
+   *     snarkjs after ceremony).
+   *   - REQUIRES `expectedPredicateHash` to be supplied (set to the
+   *     canonical GP hash registered on-chain). This is the binding that
+   *     prevents proof-replay across different GP programs.
+   *   - Does NOT need an issuer DID: V2 proofs commit to the issuer key
+   *     internally via the credential commitment, and credential-level
+   *     authenticity has already been validated at import time.
+   *
+   * Audience binding (VP JWT iss / aud / exp / signature) is identical to
+   * V1 and re-uses `verifyVPJwtStructure`.
+   */
+  async verifyOffchainV2(params: {
+    presentation: OpenACPresentation
+    expectedPredicateHash: string   // required: canonical GP hash
+    vpJwt: string
+    holderDid: string
+  }): Promise<{ valid: boolean; reason?: string; timingMs?: number }> {
+    const start = Date.now()
+
+    // V2 verification: binds proof to expectedPredicateHash + checks sentinel.
+    const zkResult = await this.openacAdapterV2.verifyPresentation(
+      params.presentation,
+      params.expectedPredicateHash,
+    )
+    if (!zkResult.valid) {
+      return { valid: false, reason: `V2 ZK proof invalid: ${zkResult.reason}` }
+    }
+
+    const vpCheck = verifyVPJwtStructure(params.vpJwt, params.holderDid, this.identity.did)
+    if (!vpCheck.valid) {
+      return { valid: false, reason: `VP JWT invalid: ${vpCheck.reason}` }
+    }
+
+    const { expiryBlock } = params.presentation.publicSignals
+    let currentBlock = 0
+    try { currentBlock = await this.identity.provider.getBlockNumber() } catch { /* offline dev */ }
     if (currentBlock > 0 && expiryBlock <= currentBlock) {
       return { valid: false, reason: `Presentation expired at block ${expiryBlock}` }
     }

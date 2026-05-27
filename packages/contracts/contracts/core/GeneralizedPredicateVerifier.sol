@@ -16,14 +16,23 @@ import { IPoseidonT4 }                   from "../lib/PoseidonT4.sol";
  *         sequence. Any consumer protocol calls verifyAndRegister() and gates its
  *         actions on the PresentationAccepted event or a subsequent isAccepted() check.
  *
- * @dev Public signal ordering (matches OpenACGPPresentation.circom):
+ * @dev Public signal ordering (matches both OpenACGPPresentation V1 and
+ *      OpenACGPPresentationV2 — the v0.4 zkID generalised-predicate circuit):
  *      pubSignals[0] = nullifier
  *      pubSignals[1] = contextHash  — Poseidon(verifierAddress, policyId, nonce)
  *      pubSignals[2] = predicateProgramHash
+ *                       V1: Poseidon over hard-coded predicate inputs
+ *                       V2: canonical zkID GP-program hash (Merkle-fold)
  *      pubSignals[3] = issuerPubKeyCommitment
  *      pubSignals[4] = credentialMerkleRoot
  *      pubSignals[5] = credentialCommitment
  *      pubSignals[6] = expiryBlock
+ *
+ *      The 7-element layout is intentionally invariant across V1/V2 so
+ *      this contract does not need to be re-deployed when migrating the
+ *      circuit. The only on-chain change required for v0.4 is to point
+ *      `proofVerifier` at the V2 Groth16 verifier produced by
+ *      `scripts/setup-circuits-v2.sh`.
  *
  * Step 7 — Context Hash Verification:
  *   The circuit computes contextHash = Poseidon(verifierAddress, policyId, nonce).

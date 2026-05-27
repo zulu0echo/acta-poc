@@ -155,61 +155,80 @@ export function encodeProgram(
  * Canonical hash over (predicates ‖ expression) — exactly the layout the
  * Circom circuit reproduces in its `predHasher` Poseidon component.
  *
- * Algorithm:
- *   1. Build fields[] from:
- *        version prefix          : 1 field
- *        bounds (M, T)           : 2 fields
- *        per-predicate (5 fields) : 5 * maxPredicates fields
- *        per-token (2 fields)     : 2 * maxTokens fields
- *   2. Poseidon-fold into one field via a Merkle-style binary tree of
- *      Poseidon(2) hashes, then collapse with a final Poseidon over the
- *      tree root and the version prefix.
+ * Layout (must match `OpenACGPPresentationV2.circom`'s `hashLeaves[]`):
+ *   leaf 0           : version (currently 1)
+ *   leaf 1           : bounds.maxPredicates (M)
+ *   leaf 2           : bounds.maxTokens (T)
+ *   leaves 3..3+5M-1 : per-predicate fields
+ *                       (claimIdx, opCode, operand, isClaimRef, isActive)
+ *   next 2T leaves   : per-token fields (type, value)
+ *   remaining        : zero-padded to the next power of 2 (currently 128).
  *
- * The fold is required because BN254 Poseidon's `Poseidon(n)` only supports
- * small `n` (typically n ≤ 16). For our default bounds (M=8, T=16) the flat
- * vector is 1 + 2 + 5*8 + 2*16 = 75 fields, so we fold.
+ * For default bounds (M=8, T=16) the active leaf count is
+ *   1 + 2 + 5*8 + 2*16 = 75
+ * and the padded leaf count is 128 (= 2^7).
+ *
+ * The fold uses Poseidon(2) at each level. Padding to a power of 2 with
+ * zeros matches the circuit's straight-pair fold (no odd-length leaf
+ * duplication). Changing the leaf layout or padding scheme requires
+ * bumping the encoder version + re-deriving every policy hash.
  */
 export function canonicalProgramHash(
   inputs: EncodedCircuitInputs,
   bounds: GPBounds = DEFAULT_GP_BOUNDS,
 ): string {
-  const fields: bigint[] = []
-  // Version + bounds
-  fields.push(1n) // encoder version
-  fields.push(BigInt(bounds.maxPredicates))
-  fields.push(BigInt(bounds.maxTokens))
-  // Predicates
-  for (let i = 0; i < bounds.maxPredicates; i++) {
-    fields.push(inputs.predClaimIdx[i])
-    fields.push(inputs.predOpCode[i])
-    fields.push(inputs.predOperand[i])
-    fields.push(inputs.predIsClaimRef[i])
-    fields.push(inputs.predIsActive[i])
-  }
-  // Expression
-  for (let k = 0; k < bounds.maxTokens; k++) {
-    fields.push(inputs.exprTokenType[k])
-    fields.push(inputs.exprTokenValue[k])
-  }
+  const fields = buildHashLeaves(inputs, bounds)
   return foldPoseidonHashHex(fields)
 }
 
 /**
- * Binary-tree fold of arbitrarily many field elements using Poseidon(2).
- *
- * For odd lengths we duplicate the last leaf (standard Merkle convention).
- * The output is the root as a 0x-prefixed bytes32 hex string.
+ * Build the leaf vector exactly as the V2 circuit does. Exposed so the
+ * holder and integration tests can assert byte-for-byte parity.
+ */
+export function buildHashLeaves(
+  inputs: EncodedCircuitInputs,
+  bounds: GPBounds = DEFAULT_GP_BOUNDS,
+): bigint[] {
+  const leaves: bigint[] = []
+  leaves.push(1n) // version
+  leaves.push(BigInt(bounds.maxPredicates))
+  leaves.push(BigInt(bounds.maxTokens))
+  for (let i = 0; i < bounds.maxPredicates; i++) {
+    leaves.push(inputs.predClaimIdx[i])
+    leaves.push(inputs.predOpCode[i])
+    leaves.push(inputs.predOperand[i])
+    leaves.push(inputs.predIsClaimRef[i])
+    leaves.push(inputs.predIsActive[i])
+  }
+  for (let k = 0; k < bounds.maxTokens; k++) {
+    leaves.push(inputs.exprTokenType[k])
+    leaves.push(inputs.exprTokenValue[k])
+  }
+  // Zero-pad to next power of 2.
+  const target = nextPowerOfTwo(leaves.length)
+  while (leaves.length < target) leaves.push(0n)
+  return leaves
+}
+
+/**
+ * Binary-tree fold of `fields[]` using Poseidon(2). REQUIRES `fields.length`
+ * to be a positive power of 2 (zero-padded by the caller). Matches the
+ * circuit's straight-pair fold.
  */
 export function foldPoseidonHash(fields: bigint[]): bigint {
   if (fields.length === 0) return 0n
   if (fields.length === 1) return fields[0]
+  if ((fields.length & (fields.length - 1)) !== 0) {
+    throw new Error(
+      `foldPoseidonHash: input length ${fields.length} is not a power of 2; ` +
+        'zero-pad before folding to match the circuit',
+    )
+  }
   let level = fields.slice()
   while (level.length > 1) {
     const next: bigint[] = []
     for (let i = 0; i < level.length; i += 2) {
-      const a = level[i]
-      const b = i + 1 < level.length ? level[i + 1] : level[i]
-      next.push(poseidonHash([a, b]))
+      next.push(poseidonHash([level[i], level[i + 1]]))
     }
     level = next
   }
@@ -219,6 +238,13 @@ export function foldPoseidonHash(fields: bigint[]): bigint {
 function foldPoseidonHashHex(fields: bigint[]): string {
   const h = foldPoseidonHash(fields)
   return '0x' + h.toString(16).padStart(64, '0')
+}
+
+function nextPowerOfTwo(n: number): number {
+  if (n <= 1) return 1
+  let p = 1
+  while (p < n) p <<= 1
+  return p
 }
 
 /** Re-export for callers that want a one-shot hex hash from a GPProgram. */

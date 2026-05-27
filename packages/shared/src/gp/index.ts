@@ -1,3 +1,5 @@
 export * from './types'
 export * from './compiler'
 export * from './encoder'
+export * from './witness'
+export * from './v1Compat'

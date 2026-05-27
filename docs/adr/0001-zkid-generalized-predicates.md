@@ -58,22 +58,31 @@ The chosen approach (reimplement design, prove parity) keeps ACTA's PoC scope ti
 
 - The on-chain `GeneralizedPredicateVerifier.sol` does not change conceptually; only the number of public signals and the `predicateProgramHash` derivation change.
 
-## Implementation status (v0.3 snapshot)
+## Implementation status (v0.4 snapshot)
 
 | Component | Shipped | Path |
 |-----------|---------|------|
-| GP IR types | yes | `packages/shared/src/gp/types.ts` |
-| Infix → postfix compiler (shunting-yard) | yes | `packages/shared/src/gp/compiler.ts` |
-| Canonical encoder + Poseidon hash | yes | `packages/shared/src/gp/encoder.ts` |
-| Unit tests + parity vectors | yes | `packages/shared/test/gp/` |
+| GP IR types | v0.3 | `packages/shared/src/gp/types.ts` |
+| Infix → postfix compiler (shunting-yard) | v0.3 | `packages/shared/src/gp/compiler.ts` |
+| Canonical encoder + Poseidon hash | v0.3 | `packages/shared/src/gp/encoder.ts` |
+| Hash leaves zero-padded to next power of 2 (matches circuit) | v0.4 | `packages/shared/src/gp/encoder.ts` |
+| Witness builder (`buildCircuitWitness` + `buildSnarkjsInput`) | v0.4 | `packages/shared/src/gp/witness.ts` |
+| V1 → V2 program translator | v0.4 | `packages/shared/src/gp/v1Compat.ts` |
+| `PredicateBuilderV2` (GP-native fluent API) | v0.4 | `packages/verifier/src/predicateBuilderV2.ts` |
+| `OpenACAdapterV2` + `StubWalletUnitV2` | v0.4 | `packages/holder/src/openacAdapterV2.ts` |
+| `OffchainVerifier.verifyOffchainV2` | v0.4 | `packages/verifier/src/offchainVerifier.ts` |
+| `@acta/sdk` predicate/witness/holder/verifier surfaces | v0.4 | `packages/sdk/src/{predicate,holder,verifier}.ts` |
 | Circom V2 circuit | **draft** | `circuits/presentation/OpenACGPPresentationV2.circom` |
-| Holder + verifier wiring | open | tracked in `docs/ROADMAP.md` Phase 1 |
+| V2 ceremony script | v0.4 — script ships, execution pending toolchain | `packages/contracts/scripts/setup-circuits-v2.sh` |
+| Live Groth16 ceremony + generated Solidity verifier | open | tracked in `docs/ROADMAP.md` Phase 1 |
+| Cross-team parity vector vs zkID `wallet-unit-poc` | open | blocked on upstream publishing prover |
 
 ## Open questions
 
-1. Should ACTA publish the GP IR under a stable JSON Schema in `docs/SPEC.md`? **Recommended**: yes, before v0.4.
+1. Should ACTA publish the GP IR under a stable JSON Schema in `docs/SPEC.md`? **Recommended**: yes, before v0.5.
 2. Should ACTA add `IN` as a primitive operator (zkID lists it under "Custom Operators")? **Recommended**: defer to v0.5 once usage data shows membership is a common pattern.
-3. Should `predicateProgramHash` include a version tag to allow IR evolution? **Recommended**: yes — prepend `0x01` for the v0.3 IR encoding.
+3. Should `predicateProgramHash` include a version tag to allow IR evolution? **Resolved (v0.4)**: yes — leaf 0 of the canonical hash vector is the encoder version (currently `1`). Verified by `buildHashLeaves` + the circuit's `hashLeaves[0] <== 1` constraint.
+4. Capability bitmask containment requires a credential-schema change (one claim per bit) before it can be expressed in GP IR. **Tracked**: `docs/ROADMAP.md` Phase 1 open work item.
 
 ## References
 

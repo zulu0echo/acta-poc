@@ -266,7 +266,8 @@ Before any public network deployment:
 |------|--------|
 | 2026-05-27 | Initial audit (Passes 1–3) |
 | 2026-05-27 | Remediation: circuit v0.2 (7 pub signals), GP verifier Step 5b, predicate Poseidon hash, test/production verifier split, holder/verifier/issuer hardening |
-| 2026-05-27 | v0.3: zkID GP IR + canonical hash shipped in `@acta/shared/gp` (ADR-0001); stealth-address derivation shipped in `@acta/holder/stealth` (ADR-0002); Circom V2 draft (`OpenACGPPresentationV2.circom`); `@acta/sdk` skeleton (ADR-0004); roadmap published. |
+| 2026-05-27 | v0.3: zkID GP IR + canonical hash shipped in `@acta/shared/gp` (ADR-0001); stealth-address derivation shipped in `@acta/shared/stealth` (ADR-0002); Circom V2 draft (`OpenACGPPresentationV2.circom`); `@acta/sdk` skeleton (ADR-0004); roadmap published. |
+| 2026-05-27 | v0.4: full off-chain V2 stack lands — JS witness builder (`buildCircuitWitness`), `PredicateBuilderV2`, `OpenACAdapterV2`, `OffchainVerifier.verifyOffchainV2`, V1→V2 translator. Encoder hash now zero-pads to power-of-2 leaves to match the circuit Merkle fold (closes a JS↔Circom hash drift). V2 ceremony script published; live ceremony pending toolchain. 92 unit tests pass across shared/verifier/holder/sdk. |
 
 ---
 
@@ -276,7 +277,7 @@ The audit findings are remediated in code (v0.2) and operationally (ACTA-013/014
 The cryptographic improvements that *fully* close those mitigations are tracked in
 [`docs/ROADMAP.md`](./ROADMAP.md):
 
-- Phase 1 (v0.4): zkID generalized-predicate circuit V2 ships → ACTA-004/005 superseded by parity tests.
+- Phase 1 (v0.4): zkID generalized-predicate **off-chain stack** shipped (witness builder, V2 holder + verifier, GP-canonical hash matching the circuit's Merkle fold); live ceremony + zkID cross-parity vector remain open. ACTA-004 / ACTA-005 are superseded for the off-chain layer; full closure waits on the live ceremony + Solidity verifier swap.
 - Phase 2 (v0.5): anchor-by-holder-commitment + stealth-address presentation flow → ACTA-013/014 closed cryptographically.
 - Phase 3 (v0.6): `@acta/sdk` clients + CLI + conformance suite → integration audit surface stabilised.
 

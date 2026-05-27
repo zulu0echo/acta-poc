@@ -307,15 +307,24 @@ This is a proof-of-concept implementation. The items below must be resolved befo
 
 ## What's next (v0.3 → v1.0)
 
-Concrete roadmap lives in [`docs/ROADMAP.md`](./docs/ROADMAP.md). Highlights shipped in v0.3:
+Concrete roadmap lives in [`docs/ROADMAP.md`](./docs/ROADMAP.md). Highlights shipped through v0.4:
 
 | Capability | Status | Path |
 |------------|--------|------|
-| zkID generalized-predicate IR + canonical hash | shipped | `packages/shared/src/gp/` |
-| Off-circuit predicate compiler + encoder + unit tests | shipped | `packages/shared/src/gp/`, `packages/shared/test/gp.test.ts` |
-| Stealth-address derivation (HKDF-SHA256 + secp256k1) | shipped | `packages/holder/src/stealth.ts` |
-| `@acta/sdk` skeleton with `predicate` + `stealth` surfaces | shipped | `packages/sdk/` |
+| zkID generalized-predicate IR + canonical hash | shipped (v0.3) | `packages/shared/src/gp/` |
+| Off-circuit predicate compiler + encoder + unit tests | shipped (v0.3) | `packages/shared/src/gp/` |
+| Stealth-address derivation (HKDF-SHA256 + secp256k1) | shipped (v0.3) | `packages/shared/src/stealth.ts` |
+| `@acta/sdk` skeleton (`predicate` + `stealth`) | shipped (v0.3) | `packages/sdk/` |
+| JS witness builder for V2 circuit (`buildCircuitWitness`) | shipped (v0.4) | `packages/shared/src/gp/witness.ts` |
+| Encoder hash padded to power-of-2 leaves (matches V2 circuit Merkle fold) | shipped (v0.4) | `packages/shared/src/gp/encoder.ts` |
+| V1 → V2 program translator (`v1ToGP`) | shipped (v0.4) | `packages/shared/src/gp/v1Compat.ts` |
+| `PredicateBuilderV2` (GP-native verifier-side fluent API) | shipped (v0.4) | `packages/verifier/src/predicateBuilderV2.ts` |
+| `OpenACAdapterV2` + `StubWalletUnitV2` (holder-side V2 path) | shipped (v0.4) | `packages/holder/src/openacAdapterV2.ts` |
+| Off-chain `verifyOffchainV2()` accepting GP-hash-bound proofs | shipped (v0.4) | `packages/verifier/src/offchainVerifier.ts` |
+| `@acta/sdk` exposes `predicate` + `stealth` + `holder` + `verifier` (v0.4 surfaces) | shipped (v0.4) | `packages/sdk/src/` |
+| V2 trusted-setup ceremony script | shipped (v0.4); execution pending toolchain | `packages/contracts/scripts/setup-circuits-v2.sh` |
 | Circom V2 circuit implementing zkID GP | **draft** — pending ZK-engineer review + ceremony | `circuits/presentation/OpenACGPPresentationV2.circom` |
+| Live Groth16 ceremony + generated Solidity verifier | open (v0.4 → v0.5) — blocked on `circom`/`snarkjs` install | `circuits/build/` |
 | Anchor V2 (by holder-commitment) | planned (v0.5) | tracked in ROADMAP Phase 2 |
 | End-to-end holder + verifier on V2 + stealth | planned (v0.5) | tracked in ROADMAP Phase 2 |
 | `@acta/sdk` issuer/holder/verifier clients + CLI | planned (v0.6) | tracked in ROADMAP Phase 3 |

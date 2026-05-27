@@ -4,19 +4,24 @@
  * Single integration surface for ACTA. See README.md and ADR-0004 for
  * the design contract.
  *
- * Currently exported (v0.3):
- *   - predicate.*  zkID generalized-predicate IR + canonical hash
- *   - stealth.*    Stealth-address derivation
+ * Currently exported (v0.3, expanded in v0.4):
+ *   - predicate.*  zkID generalized-predicate IR, builder, encoder,
+ *                  witness builder, canonical hash, V1 → V2 translator
+ *   - stealth.*    Stealth-address derivation (HKDF + secp256k1)
+ *   - holder.*     V0.4 OpenACAdapterV2 + V2 stub prover
+ *   - verifier.*   PredicateBuilderV2 + OffchainVerifier V2
  *
  * Open (v0.6 — see docs/ROADMAP.md Phase 3):
- *   - ActaClient.create()
- *   - acta.issuer.*, acta.holder.*, acta.verifier.*, acta.ceremony.*
+ *   - ActaClient.create()  (top-level orchestrator)
+ *   - acta.ceremony.*      (snarkjs lifecycle helpers)
  */
 
 import * as predicate from './predicate'
 import * as stealth from './stealth'
+import * as holder from './holder'
+import * as verifier from './verifier'
 
-export { predicate, stealth }
+export { predicate, stealth, holder, verifier }
 
 /** Marker error for surfaces not yet implemented in v0.3. */
 export class NotImplementedError extends Error {

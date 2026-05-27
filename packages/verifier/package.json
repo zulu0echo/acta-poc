@@ -6,7 +6,7 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "dev": "ts-node src/server.ts",
-    "test": "mocha --require ts-node/register 'test/**/*.ts' --timeout 30000"
+    "test": "TS_NODE_TRANSPILE_ONLY=true mocha --require ts-node/register 'test/**/*.ts' --timeout 30000"
   },
   "dependencies": {
     "@acta/shared": "*",
